@@ -14,11 +14,11 @@ app.secret_key = b'sf423ef24378y'  # TODO replace with dynamically generated key
 
 APP_ID = "1113503899492527"
 FB_VISUALLINE_APP_SECRET = environ.get('FB_VISUALLINE_APP_SECRET')
-APP_URL = "https://visualline.herokuapp.com/"
-AUTH_REDIRECT_URL = APP_URL+"auth/"
+APP_URL = "https://visualline.herokuapp.com"
+AUTH_REDIRECT_URL = APP_URL+"/auth/"
 FB_AUTH_URL = "https://api.instagram.com/oauth/authorize"
 FB_ACCESS_TOKEN_URL = "https://api.instagram.com/oauth/access_token"
-FB_GRAPH_URL = "https://graph.instagram.com/"
+FB_GRAPH_URL = "https://graph.instagram.com"
 
 
 # Initialize SQLite3
@@ -37,8 +37,8 @@ def request_login():
 
 @app.route("/auth/")
 def auth():
-    _code = request.args.get('code')
-    if _code is None:
+    code = request.args.get('code')
+    if code is None:
         return {
             "error_type": "AuthException",
             "error_message": "Please provide correct short-lived code for FB authentication"
@@ -52,15 +52,15 @@ def auth():
         'redirect_uri': AUTH_REDIRECT_URL,
         'code': _code
     }
-    _response = req.post(FB_ACCESS_TOKEN_URL, data=fields).json()
+    response = req.post(FB_ACCESS_TOKEN_URL, data=fields).json()
     print("Auth response:")
-    print(_response)
+    print(response)
 
-    if ('user_id' not in _response) or ('access_token' not in _response):
+    if ('user_id' not in response) or ('access_token' not in response):
         return {
             "error_type": "FBAuthException",
             "error_message": "Authentication with FB failed",
-            "data": _response
+            "data": response
         }
 
     # Save user's credentials in session storage
@@ -80,18 +80,16 @@ def de_auth():
 def index():
     return f"""
         <html>
-            <a href="{APP_URL}fetch/">/fetch/</a> <br/>
-            <a href="{APP_URL}login/">/login/</a> <br/>
-            <a href="{APP_URL}auth/">/auth/</a> <br/>
-            <a href="{APP_URL}de_auth/">/de-auth/</a> 
+            <a href="{APP_URL}/fetch/">/fetch/</a> <br/>
+            <a href="{APP_URL}/login/">/login/</a> <br/>
+            <a href="{APP_URL}/auth/">/auth/</a> <br/>
+            <a href="{APP_URL}/de_auth/">/de-auth/</a> 
         </html>
         """
 
 
 @app.route("/fetch/")
 def serve_image():
-    # account_name = request.args.get('acc')
-
     if ('user_id' not in session) or ('access_token' not in session):
         return {
             "error_type": "AuthRequired",
@@ -100,23 +98,35 @@ def serve_image():
 
     user_id = session['user_id']
     access_token = session['access_token']
-    images, timestamps = get_data(user_id, access_token)
+    return fetch_user_media(user_id, access_token)
 
-    strips = get_strips(images)
-    canvas = draw(strips, timestamps)
+    # images, timestamps = get_data(user_id, access_token)
+    #
+    # strips = get_strips(images)
+    # canvas = draw(strips, timestamps)
+    #
+    # output = io.BytesIO()
+    # iio.imwrite(output, canvas, format_hint=".jpg")
+    # output.seek(0)
+    # return send_file(output, mimetype='image/jpg')
 
-    output = io.BytesIO()
-    iio.imwrite(output, canvas, format_hint=".jpg")
-    output.seek(0)
-    return send_file(output, mimetype='image/jpg')
+
+def fetch_user_name(user_id, access_token):
+    fields = {
+        "fields": "id,username,media_count",
+        "access_token": access_token
+    }
+    response = req.get(f"{FB_GRAPH_URL}/me", params=fields).json()
+    return response
 
 
-def fetch_data():
-    user_id = ""
-    access_token = ""
-    r = f"""{FB_GRAPH_URL}/{user_id}?
-        fields=id,username
-        &access_token={access_token}"""
+def fetch_user_media(_user_id, access_token):
+    fields = {
+        "fields": "id,caption,media_type,media_url,permalink,timestamp,username",
+        "access_token": access_token
+    }
+    response = req.get(f"{FB_GRAPH_URL}/me/media", params=fields).json()
+    return response
 
 
 if __name__ == '__main__':
