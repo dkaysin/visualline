@@ -27,12 +27,11 @@ FB_GRAPH_URL = "https://graph.instagram.com/"
 # This will be moved to frontend
 @app.route("/login/")
 def request_login():
-    href = f"""
-        {FB_AUTH_URL}
-        ?client_id={APP_ID}
-        &redirect_uri={AUTH_REDIRECT_URL}
-        &scope=user_profile,user_media"
-        &response_type=code"""
+    href = f"{FB_AUTH_URL}" + \
+        f"?client_id={APP_ID}" + \
+        f"&redirect_uri={AUTH_REDIRECT_URL}" + \
+        f"&scope=user_profile,user_media" + \
+        f"&response_type=code"
     return f"<html> <a href={href}> Click to login </a> </html>"
 
 
@@ -45,7 +44,7 @@ def auth():
             "error_message": "Please provide correct short-lived code for FB authentication"
         }
 
-    _code = escape(_code)
+    # _code = escape(_code)
     fields = {
         'client_id': APP_ID,
         'client_secret': FB_VISUALLINE_APP_SECRET,
@@ -78,7 +77,7 @@ def de_auth():
 
 
 @app.route("/")
-def home():
+def index():
     return f"""
         <html>
             <a href="{APP_URL}fetch/">/fetch/</a> <br/>
