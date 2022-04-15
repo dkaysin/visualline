@@ -14,8 +14,7 @@ def serve_image():
     # render(canvas)
 
     output = io.BytesIO()
-    iio.imwrite(output, canvas, format_hint=".jpg")
-    # return output
+    iio.imwrite(output, canvas, format_hint=".jpeg")
     return send_file(output, mimetype='image/jpeg')
 
 
