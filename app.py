@@ -38,6 +38,11 @@ def request_login():
 @app.route("/auth/")
 def auth():
     code = escape(request.args.get('code'))
+    if code is None:
+        return {
+            "error_type": "AuthException",
+            "error_message": "Incorrect parameters passed to /auth"
+        }
     fields = {
         'client_id': APP_ID,
         'client_secret': FB_VISUALLINE_APP_SECRET,
@@ -78,8 +83,8 @@ def serve_image():
 
     if ('user_id' not in session) or ('access_token' not in session):
         return {
-            "status": 0,
-            "description": "User is not authenticated"
+            "error_type": "AuthRequired",
+            "error_message": "User is not authenticated"
         }
 
     user_id = session['user_id']
