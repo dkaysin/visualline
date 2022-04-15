@@ -27,7 +27,8 @@ FB_GRAPH_URL = "https://graph.instagram.com/"
 # This will be moved to frontend
 @app.route("/login/")
 def request_login():
-    href = f"""{FB_AUTH_URL}
+    href = f"""
+        {FB_AUTH_URL}
         ?client_id={APP_ID}
         &redirect_uri={AUTH_REDIRECT_URL}
         &scope=user_profile,user_media"
@@ -43,6 +44,7 @@ def auth():
             "error_type": "AuthException",
             "error_message": "Incorrect parameters passed to /auth"
         }
+
     fields = {
         'client_id': APP_ID,
         'client_secret': FB_VISUALLINE_APP_SECRET,
@@ -53,6 +55,13 @@ def auth():
     response = req.post(FB_ACCESS_TOKEN_URL, data=fields).json()
     print("Auth response:")
     print(response)
+
+    if ('user_id' not in response) or ('access_token' not in response):
+        return {
+            "error_type": "FBAuthException",
+            "error_message": "Incorrect credentials"
+        }
+
     # Save user's credentials in session storage
     session['user_id'] = response['user_id']
     session['access_token'] = response['access_token']
