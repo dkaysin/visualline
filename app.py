@@ -44,13 +44,13 @@ def auth():
             "error_message": "Please provide correct short-lived code for FB authentication"
         }
 
-    # _code = escape(_code)
+    # code = escape(code)
     fields = {
         'client_id': APP_ID,
         'client_secret': FB_VISUALLINE_APP_SECRET,
         'grant_type': 'authorization_code',
         'redirect_uri': AUTH_REDIRECT_URL,
-        'code': _code
+        'code': code
     }
     response = req.post(FB_ACCESS_TOKEN_URL, data=fields).json()
     print("Auth response:")
@@ -64,8 +64,8 @@ def auth():
         }
 
     # Save user's credentials in session storage
-    session['user_id'] = _response['user_id']
-    session['access_token'] = _response['access_token']
+    session['user_id'] = response['user_id']
+    session['access_token'] = response['access_token']
     return f"<html> Authentication is complete</html>"
 
 
@@ -132,3 +132,4 @@ def fetch_user_media(_user_id, access_token):
 if __name__ == '__main__':
     print('Hello world!')
     # image = serve_image()
+    
