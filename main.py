@@ -92,26 +92,29 @@ def draw(_strips, _timestamps):
         raise ValueError('Not enough images')
     if len(_strips) != len(_timestamps):
         raise ValueError('Images and timestamp list lengths do not match')
-    # Draw gradient
+    # draw gradient
     _canvas = np.full((CANVAS_WIDTH, CANVAS_HEIGHT, 3), 0, dtype=float)
     _canvas = _insert_gradient(_canvas, _strips, _timestamps)
-    # Draw glowing strips
+    # draw glowing strips
     _layer = np.full((CANVAS_WIDTH, CANVAS_HEIGHT, 3), 0, dtype=float)
     _insert_strips(_layer, _strips, _timestamps)
     _layer = filters.gaussian(_layer, 10, channel_axis=2)
     _insert_strips(_layer, _strips, _timestamps)
     _layer = filters.gaussian(_layer, 3, channel_axis=2)
     _insert_strips(_layer, _strips, _timestamps)
-    # Blend (screen mode)
+    # blend (screen mode)
     _canvas = 1 - (1-_canvas) * (1-_layer)
-    # Post-processing
+    # post-processing
     _canvas = _post_process(_canvas)
+    # swap rows and columns
+    _canvas = np.transpose(_canvas, (1, 0, 2))
+    # Convert from float[-1.,1.] to uint8[0,255]
+    _canvas = img_as_ubyte(_canvas)
     return _canvas
 
 
 def render(im):
-    im = np.transpose(im, (1, 0, 2))
-    io.imsave('./out.jpg', img_as_ubyte(im))
+    io.imsave('./out.jpg', im)
 
 
 if __name__ == '__main__':

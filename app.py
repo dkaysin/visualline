@@ -1,17 +1,24 @@
 from flask import Flask, send_file
 from main import dataset, get_strips, draw, render
-import os
+import imageio.v3 as iio
+import io
 
 app = Flask(__name__)
 
 
 @app.route("/")
-def hello_world():
+def serve_image():
     images, timestamps = dataset()
     strips = get_strips(images)
     canvas = draw(strips, timestamps)
-    render(canvas)
+    # render(canvas)
 
-    # return "<p>Hello, World!</p>"
-    image = os.path.join('./out.jpg')
-    return send_file(image, mimetype='image/jpg')
+    output = io.BytesIO()
+    iio.imwrite(output, canvas, format_hint=".jpg")
+    # return output
+    return send_file(output, mimetype='image/jpeg')
+
+
+# if __name__ == '__main__':
+#     # print('Test')
+#     image = serve_image()
