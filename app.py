@@ -2,7 +2,7 @@ from flask import Flask, send_file, request
 import imageio.v3 as iio
 import io
 
-from main import get_strips, draw, render
+from process import get_strips, draw, render
 from data import sample_dataset, get_data
 
 app = Flask(__name__)
