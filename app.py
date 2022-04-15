@@ -1,4 +1,4 @@
-from flask import Flask, send_file, request, session
+from flask import Flask, send_file, request, session, redirect, url_for
 import imageio.v3 as iio
 import io
 import requests as req
@@ -72,6 +72,7 @@ def auth():
 def de_auth():
     session.pop('user_id', None)
     session.pop('access_token', None)
+    return redirect(url_for('index'))
 
 
 @app.route("/")
