@@ -8,11 +8,13 @@ from data import sample_dataset, get_data
 app = Flask(__name__)
 
 
-@app.route("/", methods=['GET'])
+# @app.route("/", methods=['GET'])
+@app.route("/")
 def serve_image():
-    account_name = request.args.get['acc']
+    # account_name = request.args.get['acc']
 
-    images, timestamps = get_data(account_name)
+    # images, timestamps = get_data(account_name)
+    images, timestamps = get_data("")
     strips = get_strips(images)
     canvas = draw(strips, timestamps)
 
