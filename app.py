@@ -10,7 +10,7 @@ from process import get_strips, draw, render
 from data import sample_dataset, get_data
 
 app = Flask(__name__)
-app.secret_key = b'sf423ef24378y'
+app.secret_key = b'sf423ef24378y'  # TODO replace with dynamically generated key
 
 APP_ID = "1113503899492527"
 FB_VISUALLINE_APP_SECRET = environ.get('FB_VISUALLINE_APP_SECRET')
@@ -53,13 +53,21 @@ def auth():
     session['access_token'] = response['access_token']
     return f"<html> Authentication is complete</html>"
 
+
+@app.route("/de_auth/")
+def de_auth():
+    session.pop('user_id', None)
+    session.pop('access_token', None)
+
+
 @app.route("/")
-def index():
+def home():
     return f"""
         <html>
             <a href="{APP_URL}fetch/">/fetch/</a> <br/>
             <a href="{APP_URL}login/">/login/</a> <br/>
-            <a href="{APP_URL}auth/">/auth/</a>
+            <a href="{APP_URL}auth/">/auth/</a> <br/>
+            <a href="{APP_URL}de_auth/">/de-auth/</a> 
         </html>
         """
 
@@ -68,12 +76,16 @@ def index():
 def serve_image():
     # account_name = request.args.get('acc')
 
-    # if 'user_id' in session:
-    #     return f'Logged in as {session["username"]}'
-    # return 'You are not logged in'
+    if ('user_id' not in session) or ('access_token' not in session):
+        return {
+            "status": 0,
+            "description": "User is not authenticated"
+        }
 
-    # images, timestamps = get_data(account_name)
-    images, timestamps = get_data("")
+    user_id = session['user_id']
+    access_token = session['access_token']
+    images, timestamps = get_data(user_id, access_token)
+
     strips = get_strips(images)
     canvas = draw(strips, timestamps)
 

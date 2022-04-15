@@ -3,7 +3,7 @@ import random
 from skimage import exposure, filters, io
 
 
-def get_data(account_name):
+def get_data(user_id, access_token):
     return sample_dataset()
 
 def sample_dataset():
