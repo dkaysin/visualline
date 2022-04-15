@@ -38,33 +38,35 @@ def request_login():
 
 @app.route("/auth/")
 def auth():
-    code = escape(request.args.get('code'))
-    if code is None:
+    _code = request.args.get('code')
+    if _code is None:
         return {
             "error_type": "AuthException",
-            "error_message": "Incorrect parameters passed to /auth"
+            "error_message": "Please provide correct short-lived code for FB authentication"
         }
 
+    _code = escape(_code)
     fields = {
         'client_id': APP_ID,
         'client_secret': FB_VISUALLINE_APP_SECRET,
         'grant_type': 'authorization_code',
         'redirect_uri': AUTH_REDIRECT_URL,
-        'code': code
+        'code': _code
     }
-    response = req.post(FB_ACCESS_TOKEN_URL, data=fields).json()
+    _response = req.post(FB_ACCESS_TOKEN_URL, data=fields).json()
     print("Auth response:")
-    print(response)
+    print(_response)
 
-    if ('user_id' not in response) or ('access_token' not in response):
+    if ('user_id' not in _response) or ('access_token' not in _response):
         return {
             "error_type": "FBAuthException",
-            "error_message": "Incorrect credentials"
+            "error_message": "Authentication with FB failed",
+            "data": _response
         }
 
     # Save user's credentials in session storage
-    session['user_id'] = response['user_id']
-    session['access_token'] = response['access_token']
+    session['user_id'] = _response['user_id']
+    session['access_token'] = _response['access_token']
     return f"<html> Authentication is complete</html>"
 
 
