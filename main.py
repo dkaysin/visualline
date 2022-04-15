@@ -2,8 +2,6 @@ from skimage import exposure, filters, io
 from skimage.util import img_as_ubyte, img_as_float
 from skimage.color import rgb2hsv, hsv2rgb
 from scipy import ndimage as ndi
-from sortedcontainers import SortedList
-import random
 import numpy as np
 
 CANVAS_WIDTH = 1000
@@ -18,14 +16,6 @@ GRADIENT_DEGREE_FLOOR = 2
 GRADIENT_DEGREE_CEIL = 4
 
 PP_SATURATION_GAIN = 1.3
-
-
-def dataset():
-    _images = io.ImageCollection('./dataset/*.jpg')
-    print("Length of dataset:", len(_images))
-    base_ts = 1331856000
-    _timestamps = SortedList([base_ts + t * random.uniform(1, 1.3) * 100000 for t in range(len(_images))])
-    return _images, _timestamps
 
 
 def _strip_vert(_image):
@@ -117,9 +107,9 @@ def render(im):
     io.imsave('./out.jpg', im)
 
 
-if __name__ == '__main__':
-    images, timestamps = dataset()
-    strips = get_strips(images)
-    canvas = draw(strips, timestamps)
-    render(canvas)
+# if __name__ == '__main__':
+    # images, timestamps = dataset()
+    # strips = get_strips(images)
+    # canvas = draw(strips, timestamps)
+    # render(canvas)
 

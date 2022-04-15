@@ -1,21 +1,25 @@
-from flask import Flask, send_file
-from main import dataset, get_strips, draw, render
+from flask import Flask, send_file, request
 import imageio.v3 as iio
 import io
+
+from main import get_strips, draw, render
+from data import sample_dataset, get_data
 
 app = Flask(__name__)
 
 
-@app.route("/")
+@app.route("/", methods=['GET'])
 def serve_image():
-    images, timestamps = dataset()
+    account_name = request.args.get['acc']
+
+    images, timestamps = get_data(account_name)
     strips = get_strips(images)
     canvas = draw(strips, timestamps)
-    # render(canvas)
 
     output = io.BytesIO()
-    iio.imwrite(output, canvas, format_hint=".jpeg")
-    return send_file(output, mimetype='image/jpeg')
+    iio.imwrite(output, canvas, format_hint=".jpg")
+    output.seek(0)
+    return send_file(output, mimetype='image/jpg')
 
 
 # if __name__ == '__main__':
