@@ -7,22 +7,23 @@ from data import sample_dataset, get_data
 
 app = Flask(__name__)
 
-APP_ID = 321034639960041
+APP_ID = "1113503899492527"
 REDIRECT_URL = "https://visualline.herokuapp.com/auth/"
 
 
 # This will be moved to frontend
 @app.route("/login/")
 def request_login():
-    request = "https://api.instagram.com/oauth/authorize" + \
-        f"?client_id = {APP_ID}" + \
-        f"& redirect_uri = {REDIRECT_URL}" + \
-        "& scope = user_profile, user_media" + \
-        "& response_type = code"
+    href = "https://api.instagram.com/oauth/authorize" + \
+        f"?client_id={APP_ID}" + \
+        f"&redirect_uri={REDIRECT_URL}" + \
+        "&scope=user_profile,user_media" + \
+        "&response_type=code"
     # send request
+    return f"<html> <a href={href}> Click to login </a> </html>"
 
 
-@app.route("/auth/<code>")
+@app.route("/auth/")
 def auth():
     code = request.args.get('code')
     print(code)
