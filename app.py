@@ -2,6 +2,8 @@ from flask import Flask, send_file, request
 import imageio.v3 as iio
 import io
 import requests as req
+from os import environ
+
 
 from process import get_strips, draw, render
 from data import sample_dataset, get_data
@@ -9,7 +11,7 @@ from data import sample_dataset, get_data
 app = Flask(__name__)
 
 APP_ID = "1113503899492527"
-APP_SECRET = '01bbb3e9102acf6212348e9fff0a36a4'
+FB_VISUALLINE_APP_SECRET = environ.get('FB_VISUALLINE_APP_SECRET')
 AUTH_REDIRECT_URL = "https://visualline.herokuapp.com/auth/"
 FB_AUTH_URL = "https://api.instagram.com/oauth/access_token"
 
@@ -30,7 +32,7 @@ def auth():
     code = request.args.get('code')
     fields = {
         'client_id': APP_ID,
-        'client_secret': APP_SECRET,
+        'client_secret': FB_VISUALLINE_APP_SECRET,
         'grant_type': 'authorization_code',
         'redirect_uri': AUTH_REDIRECT_URL,
         'code': code
