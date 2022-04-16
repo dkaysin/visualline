@@ -4,7 +4,7 @@ from skimage import exposure, filters, io
 import imageio.v3 as iio
 import requests as req
 
-from Media import Media
+from Media import Media, parse_media
 
 
 FB_GRAPH_URL = "https://graph.instagram.com"
@@ -30,12 +30,11 @@ def _fetch_user_media(_user_id: str, access_token: str) -> dict:
 
 def get_media_list(user_id: str, access_token: str) -> SortedKeyList[Media]:
     response = _fetch_user_media(user_id, access_token)
-    print(response)
     if "data" not in response:
         return SortedKeyList([])
     data = response["data"]
     return SortedKeyList(
-        [Media(media) for media in data],
+        (x for x in (parse_media(media) for media in data) if x is not None),
         key=(lambda m: m.timestamp)
     )
 

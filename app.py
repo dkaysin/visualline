@@ -5,7 +5,7 @@ import requests as req
 from os import environ
 from markupsafe import escape
 
-from draw import draw
+from draw import draw, save_on_disk
 from data import get_media_list
 
 
@@ -89,19 +89,19 @@ def index():
 
 @app.route("/fetch/")
 def serve_image():
-    # if ('user_id' not in session) or ('access_token' not in session):
-    #     return {
-    #         "error_type": "AuthRequired",
-    #         "error_message": "User is not authenticated"
-    #     }
+    if ('user_id' not in session) or ('access_token' not in session):
+        return {
+            "error_type": "AuthRequired",
+            "error_message": "User is not authenticated"
+        }
 
-    user_id = ""
-    access_token = "AQCMpXl4ivQH1HaluyUhFGhRl1rV1UPclnJrQvTZerGW40vJkChiGKY3y6p3rr1Ws_PHMDF2p65T8ELcdfRbtuB5V5zhmILUManshUmJD8UYvYszumOPpDKicFGg76BUVmh_UO09tlSYi_jGxQmBefd89ufAvhLkGVRqAcyiecIww-LExBFh1dIFx7X91xUsIYTa9Q7wVn1Vl6JKu7iVDdlNuGS6grxBGySS9uJyoMfSOg"
-
-    # user_id = session['user_id']
-    # access_token = session['access_token']
+    
+    user_id = session['user_id']
+    access_token = session['access_token']
     media_list = get_media_list(user_id, access_token)
     canvas = draw(media_list)
+
+    save_on_disk(canvas)
 
     output = io.BytesIO()
     iio.imwrite(output, canvas, format_hint=".jpg")
