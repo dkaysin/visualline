@@ -43,7 +43,7 @@ def auth():
             "error_message": "Please provide correct short-lived code for FB authentication"
         }
 
-    # code = escape(code)
+    code = escape(code)
     fields = {
         'client_id': APP_ID,
         'client_secret': FB_VISUALLINE_APP_SECRET,
@@ -65,7 +65,7 @@ def auth():
     # Save user's credentials in session storage
     session['user_id'] = response['user_id']
     session['access_token'] = response['access_token']
-    return f"<html> Authentication is complete</html>"
+    return redirect(url_for('index'))
 
 
 @app.route("/de_auth/")
@@ -89,15 +89,17 @@ def index():
 
 @app.route("/fetch/")
 def serve_image():
-    if ('user_id' not in session) or ('access_token' not in session):
-        return {
-            "error_type": "AuthRequired",
-            "error_message": "User is not authenticated"
-        }
+    # if ('user_id' not in session) or ('access_token' not in session):
+    #     return {
+    #         "error_type": "AuthRequired",
+    #         "error_message": "User is not authenticated"
+    #     }
 
-    user_id = session['user_id']
-    access_token = session['access_token']
+    user_id = ""
+    access_token = "AQCMpXl4ivQH1HaluyUhFGhRl1rV1UPclnJrQvTZerGW40vJkChiGKY3y6p3rr1Ws_PHMDF2p65T8ELcdfRbtuB5V5zhmILUManshUmJD8UYvYszumOPpDKicFGg76BUVmh_UO09tlSYi_jGxQmBefd89ufAvhLkGVRqAcyiecIww-LExBFh1dIFx7X91xUsIYTa9Q7wVn1Vl6JKu7iVDdlNuGS6grxBGySS9uJyoMfSOg"
 
+    # user_id = session['user_id']
+    # access_token = session['access_token']
     media_list = get_media_list(user_id, access_token)
     canvas = draw(media_list)
 

@@ -30,6 +30,7 @@ def _fetch_user_media(_user_id: str, access_token: str) -> dict:
 
 def get_media_list(user_id: str, access_token: str) -> SortedKeyList[Media]:
     response = _fetch_user_media(user_id, access_token)
+    print(response)
     if "data" not in response:
         return SortedKeyList([])
     data = response["data"]
