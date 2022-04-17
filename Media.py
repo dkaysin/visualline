@@ -1,9 +1,6 @@
-from skimage import exposure, filters, io
 from skimage.util import img_as_ubyte, img_as_float
-from skimage.color import rgb2hsv, hsv2rgb
 from scipy import ndimage as ndi
 import numpy as np
-from sortedcontainers import SortedKeyList
 from datetime import datetime
 import imageio.v3 as iio
 import asyncio as aio
@@ -13,7 +10,7 @@ CANVAS_HEIGHT = 1000
 STRIP_BLUR_RADIUS = CANVAS_HEIGHT / 20
 
 
-async def parse_media(session, payload):
+async def parse_media(client, payload):
     media = Media(payload)
     if media.media_type in ["IMAGE", "CAROUSEL_ALBUM"]:
         url = payload.get('media_url')
@@ -23,7 +20,7 @@ async def parse_media(session, payload):
             tries += 1
             try:
                 print("Fetching image from url. Media id: ", media.media_id)
-                response = await session.get(url)
+                response = await client.get(url)
                 img_bytes = response.content
                 image = img_as_float(iio.imread(img_bytes))
             except:  # TODO more specific exception must be used
