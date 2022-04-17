@@ -5,6 +5,8 @@ import requests as req
 from os import environ
 from markupsafe import escape
 from sortedcontainers import SortedList, SortedKeyList
+import asyncio as aio
+
 
 from draw import draw, save_on_disk
 from data import get_media_list
@@ -90,11 +92,12 @@ def index():
 
 @app.route("/fetch/")
 async def serve_image():
-    code = request.args.get('code')
-    if code is None:
+    style = request.args.get('style')
+    if style is None:
         style = 0
     else:
-        style = int(code)
+        await aio.sleep(4)
+        style = int(style)
 
     if ('user_id' not in session) or ('access_token' not in session):
         return {

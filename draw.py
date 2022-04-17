@@ -5,13 +5,14 @@ from scipy import ndimage as ndi
 import numpy as np
 from sortedcontainers import SortedKeyList
 import math
+import time
 
 from Media import Media
 
 BG_GAMMA_FACTOR = 0.25
 
-GRADIENT_DEGREE_FLOOR = 2
-GRADIENT_DEGREE_CEIL = 4
+GRADIENT_DEGREE_FLOOR = 1.5
+GRADIENT_DEGREE_CEIL = 3
 
 PP_SATURATION_GAIN = 1.3
 
@@ -47,22 +48,14 @@ def _insert_gradient(canvas: np.array, media_list: SortedKeyList[Media], style: 
     positions = [m.strip_position for m in media_list]
     lo, hi = min(positions), max(positions)
     for n, col in enumerate(canvas):
-        # print("New stripe:")
-        # print("Line ", n, " out of ", canvas.shape[0])
         ts_interp = n / (canvas.shape[0] - 1) * (hi - lo) + lo
         index_floor = media_list.bisect_key_left(ts_interp + 0.001) - 1
         index_ceil = media_list.bisect_key_left(ts_interp - 0.001)
         ts_floor = media_list[index_floor].strip_position
         ts_ceil = media_list[index_ceil].strip_position
-        # print("ts_interp:", ts_interp)
-        # print("lo, hi: ", lo, hi)
-        # print("ts_floor:", ts_floor)
-        # print("ts_ceil:", ts_ceil)
-        # print("index_floor:", index_floor)
-        # print("index_ceil:", index_ceil)
 
         if style == 1:
-            canvas[n] = media_list[index_floor].strip
+            canvas[n] = media_list[index_floor].strip * 0.6
 
         else:
             if ts_ceil - ts_floor != 0:
@@ -79,29 +72,40 @@ def _insert_gradient(canvas: np.array, media_list: SortedKeyList[Media], style: 
 
 
 def draw(media_list: SortedKeyList[Media], canvas_width: int, canvas_height: int, style: int) -> np.array:
+    start_time = time.time()
     if len(media_list) < 2:
         raise ValueError('Not enough images')
 
     # draw gradient
     canvas = np.full((canvas_width, canvas_height, 3), 0, dtype=float)
     canvas = _insert_gradient(canvas, media_list, style)
-    # draw strips on a separate layer
     layer = np.full((canvas_width, canvas_height, 3), 0, dtype=float)
-    _insert_strips(layer, media_list)
-    layer = filters.gaussian(layer, 10, channel_axis=2)
-    _insert_strips(layer, media_list)
-    layer = filters.gaussian(layer, 3, channel_axis=2)
-    _insert_strips(layer, media_list)
+    if style == 1:
+        _insert_strips(layer, media_list)
+        layer = filters.gaussian(layer, 10, channel_axis=2, mode="constant")
+        layer *= 2
+        _insert_strips(layer, media_list)
+        layer = filters.gaussian(layer, 3, channel_axis=2, mode="constant")
+        layer *= 2
+        _insert_strips(layer, media_list)
+        layer *= 0.8
+    else:
+        _insert_strips(layer, media_list)
+        layer = filters.gaussian(layer, 10, channel_axis=2, mode="constant")
+        _insert_strips(layer, media_list)
+        layer = filters.gaussian(layer, 3, channel_axis=2, mode="constant")
+        _insert_strips(layer, media_list)
+        layer *= 0.8
     # blend (screen mode)
-    # canvas = 1 - (1-canvas) * (1-layer)
+    canvas = 1 - (1-canvas) * (1-layer)
     # post-processing
-    canvas = _post_process(canvas)
+    # canvas = _post_process(canvas)
     # swap rows and columns
     canvas = np.transpose(canvas, (1, 0, 2))
-    # # Convert from float[-1.,1.] to uint8[0,255]
+    # Convert from float[-1.,1.] to uint8[0,255]
     canvas = img_as_ubyte(canvas)
+    print("<draw> execution time: --- %s seconds ---" % (time.time() - start_time))
     return canvas
-
 
 def save_on_disk(account_id: str, canvas: np.array):
     io.imsave(f"./{account_id}.jpg", canvas)

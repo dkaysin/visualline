@@ -43,7 +43,7 @@ async def get_media_list(user_id: str, access_token: str) -> [Media]:
     start_time = time.time()
 
     response = _fetch_user_media(user_id, access_token)
-    print(response)
+    # print(response)
     if "error" in response:
         raise IOError('Received error while fetching user media:', response)
     if "data" not in response:
@@ -67,8 +67,6 @@ async def get_media_list(user_id: str, access_token: str) -> [Media]:
     res = [m for m in res if m is not None]
     res = sorted(res, key=lambda m: m.strip_position)
     res = _generate_strip_positions(res)
-
-    # print([m.strip.shape for m in res])
 
     print("<get_media_list> execution time: --- %s seconds ---" % (time.time() - start_time))
     return res

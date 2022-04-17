@@ -4,7 +4,7 @@ import numpy as np
 from datetime import datetime
 import imageio.v3 as iio
 import asyncio as aio
-import math
+import time
 
 CANVAS_HEIGHT = 1000
 STRIP_BLUR_RADIUS = CANVAS_HEIGHT / 20
@@ -24,7 +24,8 @@ async def parse_media(client, payload):
                 img_bytes = response.content
                 image = img_as_float(iio.imread(img_bytes))
             except Exception:  # TODO more specific exception must be used
-                await aio.sleep(0.1 * 2**tries)
+                # await aio.sleep(0.1 * 2**tries)
+                await aio.sleep(0.1)
         if image is not None:
             media.strip = generate_strip(image)
             return media
@@ -51,12 +52,17 @@ class Media:
 
 
 def generate_strip(image: np.array) -> np.array:
+    subsampling = 5
+    start_time = time.time()
     if image is None:
         raise ValueError("Image provided to generate_strip is None")
-    strip = np.median(image, axis=1)
+    strip = np.median(image[::subsampling, ::subsampling, ::], axis=1)
+    # strip = ndi.zoom(strip, (2/strip.shape[0], 1))
+    # strip = ndi.zoom(strip, (CANVAS_HEIGHT / strip.shape[0], 1))
     if image.shape[0] != CANVAS_HEIGHT:
         strip = ndi.zoom(strip, (CANVAS_HEIGHT / strip.shape[0], 1))
     strip = ndi.gaussian_filter1d(strip, sigma=STRIP_BLUR_RADIUS, axis=0)
+    print("<generate_strip> execution time: --- %s seconds ---" % (time.time() - start_time))
     return strip
 
 
