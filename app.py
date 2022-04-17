@@ -4,6 +4,8 @@ import io
 import requests as req
 from os import environ
 from markupsafe import escape
+import asyncio as aio
+from sortedcontainers import SortedList, SortedKeyList
 
 from draw import draw, save_on_disk
 from data import get_media_list
@@ -20,10 +22,7 @@ FB_AUTH_URL = "https://api.instagram.com/oauth/authorize"
 FB_ACCESS_TOKEN_URL = "https://api.instagram.com/oauth/access_token"
 
 
-# Initialize SQLite3
-
-
-# This will be moved to frontend
+# TODO move to frontend
 @app.route("/login/")
 def request_login():
     href = f"{FB_AUTH_URL}" + \
@@ -88,20 +87,22 @@ def index():
 
 
 @app.route("/fetch/")
-def serve_image():
+async def serve_image():
     if ('user_id' not in session) or ('access_token' not in session):
         return {
             "error_type": "AuthRequired",
             "error_message": "User is not authenticated"
         }
 
-    
     user_id = session['user_id']
     access_token = session['access_token']
-    media_list = get_media_list(user_id, access_token)
+    media_list = SortedKeyList(
+        list(await get_media_list(user_id, access_token)),
+        key=(lambda m: m.timestamp)
+    )
     canvas = draw(media_list)
 
-    save_on_disk(canvas)
+    # save_on_disk(canvas)
 
     output = io.BytesIO()
     iio.imwrite(output, canvas, format_hint=".jpg")

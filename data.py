@@ -3,6 +3,9 @@ import random
 from skimage import exposure, filters, io
 import imageio.v3 as iio
 import requests as req
+import asyncio as aio
+import httpx
+import time
 
 from Media import Media, parse_media
 
@@ -28,15 +31,22 @@ def _fetch_user_media(_user_id: str, access_token: str) -> dict:
     return response
 
 
-def get_media_list(user_id: str, access_token: str) -> SortedKeyList[Media]:
+async def get_media_list(user_id: str, access_token: str) -> [Media]:
     response = _fetch_user_media(user_id, access_token)
+    print(response)
+    if "error" in response:
+        raise IOError('Received error while fetching user media:', response)
     if "data" not in response:
         return SortedKeyList([])
     data = response["data"]
-    return SortedKeyList(
-        (x for x in (parse_media(media) for media in data) if x is not None),
-        key=(lambda m: m.timestamp)
-    )
+
+    session = httpx.AsyncClient()
+
+    start_time = time.time()
+    futures = [parse_media(session, media) for media in data]
+    res = await aio.gather(*futures)
+    print("Elapsed: --- %s seconds ---" % (time.time() - start_time))
+    return [x for x in res if x is not None]
 
 
 # def sample_dataset():

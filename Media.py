@@ -6,27 +6,32 @@ import numpy as np
 from sortedcontainers import SortedKeyList
 from datetime import datetime
 import imageio.v3 as iio
-import math
+import asyncio as aio
+import httpx
 
 CANVAS_HEIGHT = 1000
 STRIP_BLUR_RADIUS = CANVAS_HEIGHT / 20
 
 
-def _generate_strip(image: np.array) -> np.array:
-    strip = np.median(image, axis=1)
-    if image.shape[0] != CANVAS_HEIGHT:
-        strip = ndi.zoom(strip, (CANVAS_HEIGHT / strip.shape[0], 1))
-    strip = ndi.gaussian_filter1d(strip, sigma=STRIP_BLUR_RADIUS, axis=0)
-    return strip
+async def parse_media(session, payload):
+    media = Media(payload)
+    if media.media_type in ["IMAGE", "CAROUSEL_ALBUM"]:
+        url = payload.get('media_url')
+        image = None
+        tries = 0
+        while (image is None) and (tries < 5):
+            tries += 1
+            try:
+                print("Fetching image from url. Media id: ", media.media_id)
+                response = await session.get(url)
+                img_bytes = response.content
+                image = img_as_float(iio.imread(img_bytes))
+            except:  # TODO more specific exception must be used
+                await aio.sleep(0.1)
+        media.strip = generate_strip(image)
+        return media
+    return None
 
-
-def parse_media(payload):
-    print(payload)
-    media_type = payload['media_type']
-    if media_type in ["IMAGE", "CAROUSEL_ALBUM"]:
-        return Media(payload)
-    else:
-        return None
 
 class Media:
     def __init__(self, payload):
@@ -40,10 +45,18 @@ class Media:
         self.timestamp = dt.timestamp()
         self.media_url = payload.get('media_url')
         self.strip = None
-        print("Processing image: ", self.media_id)
-        image = img_as_float(iio.imread(self.media_url))
-        self.strip = _generate_strip(image)
+
+
+def generate_strip(image: np.array) -> np.array:
+    if image is None:
+        return None
+    strip = np.median(image, axis=1)
+    if image.shape[0] != CANVAS_HEIGHT:
+        strip = ndi.zoom(strip, (CANVAS_HEIGHT / strip.shape[0], 1))
+    strip = ndi.gaussian_filter1d(strip, sigma=STRIP_BLUR_RADIUS, axis=0)
+    return strip
+
 
 # if __name__ == '__main__':
-    pass
+#     pass
 
