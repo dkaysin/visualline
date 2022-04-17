@@ -78,13 +78,13 @@ def _insert_gradient(canvas: np.array, media_list: SortedKeyList[Media], style: 
     return canvas
 
 
-def draw(media_list: SortedKeyList[Media], canvas_width: int, canvas_height: int) -> np.array:
+def draw(media_list: SortedKeyList[Media], canvas_width: int, canvas_height: int, style: int) -> np.array:
     if len(media_list) < 2:
         raise ValueError('Not enough images')
 
     # draw gradient
     canvas = np.full((canvas_width, canvas_height, 3), 0, dtype=float)
-    canvas = _insert_gradient(canvas, media_list)
+    canvas = _insert_gradient(canvas, media_list, style)
     # draw strips on a separate layer
     layer = np.full((canvas_width, canvas_height, 3), 0, dtype=float)
     _insert_strips(layer, media_list)
