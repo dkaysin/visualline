@@ -4,15 +4,17 @@ import io
 import requests as req
 from os import environ
 from markupsafe import escape
-import asyncio as aio
 from sortedcontainers import SortedList, SortedKeyList
 
 from draw import draw, save_on_disk
 from data import get_media_list
 
+CANVAS_WIDTH = 1000
+CANVAS_HEIGHT = 1000
+
 
 app = Flask(__name__)
-app.secret_key = b'sf423ef24378y'  # TODO replace with dynamically generated key
+app.secret_key = b'sf423ef24378y'  # TODO replace with dynamically generated key on a per-person basis
 
 APP_ID = "1113503899492527"
 FB_VISUALLINE_APP_SECRET = environ.get('FB_VISUALLINE_APP_SECRET')
@@ -88,21 +90,25 @@ def index():
 
 @app.route("/fetch/")
 async def serve_image():
+    code = request.args.get('code')
+    if code is None:
+        style = 0
+    else:
+        style = int(code)
+
     if ('user_id' not in session) or ('access_token' not in session):
         return {
             "error_type": "AuthRequired",
             "error_message": "User is not authenticated"
         }
-
     user_id = session['user_id']
     access_token = session['access_token']
-    media_list = SortedKeyList(
-        list(await get_media_list(user_id, access_token)),
-        key=(lambda m: m.timestamp)
-    )
-    canvas = draw(media_list)
 
-    # save_on_disk(canvas)
+    media_list = SortedKeyList(
+        await get_media_list(user_id, access_token),
+        key=lambda m: m.strip_position
+    )
+    canvas = draw(media_list, CANVAS_WIDTH, CANVAS_HEIGHT, style)
 
     output = io.BytesIO()
     iio.imwrite(output, canvas, format_hint=".jpg")

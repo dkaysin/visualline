@@ -4,14 +4,11 @@ from skimage.color import rgb2hsv, hsv2rgb
 from scipy import ndimage as ndi
 import numpy as np
 from sortedcontainers import SortedKeyList
+import math
 
 from Media import Media
 
-CANVAS_WIDTH = 1000
-CANVAS_HEIGHT = 1000
-
 BG_GAMMA_FACTOR = 0.25
-BG_BLUR_RADIUS = CANVAS_HEIGHT / 8
 
 GRADIENT_DEGREE_FLOOR = 2
 GRADIENT_DEGREE_CEIL = 4
@@ -30,59 +27,73 @@ def _post_process(canvas: np.array) -> np.array:
 def _strips_bg(media_list: SortedKeyList[Media]) -> np.array:
     strips = [media.strip for media in media_list]
     line = np.median(strips, axis=0) * BG_GAMMA_FACTOR
-    line = ndi.gaussian_filter1d(line, sigma=BG_BLUR_RADIUS, axis=0)
+    blur_radius = line.shape[0] / 8  # TODO test this
+    line = ndi.gaussian_filter1d(line, sigma=blur_radius, axis=0)
     return line
 
 
 def _insert_strips(canvas: np.array, media_list: SortedKeyList[Media]) -> np.array:
-    hi = max([m.timestamp for m in media_list])
-    lo = min([m.timestamp for m in media_list])
+    positions = [m.strip_position for m in media_list]
+    lo, hi = min(positions), max(positions)
     for media in media_list:
-        if (media.strip is None) or (media.timestamp is None):
+        if (media.strip is None) or (media.strip_position is None):
             continue
-        t = media.timestamp
-        n = int((t-lo) / (hi-lo) * (CANVAS_WIDTH - 1))
+        t = media.strip_position
+        n = int((t-lo) / (hi-lo) * (canvas.shape[0] - 1))
         canvas[n] = media.strip
 
 
-def _insert_gradient(canvas: np.array, media_list: SortedKeyList[Media]) -> np.array:
-    hi = max([m.timestamp for m in media_list])
-    lo = min([m.timestamp for m in media_list])
+def _insert_gradient(canvas: np.array, media_list: SortedKeyList[Media], style: int) -> np.array:
+    positions = [m.strip_position for m in media_list]
+    lo, hi = min(positions), max(positions)
     for n, col in enumerate(canvas):
-        ts_interp = ((n / CANVAS_WIDTH) * (hi - lo) + lo)
-        index_floor = media_list.bisect_key_left(ts_interp + 1) - 1
-        index_ceil = media_list.bisect_key_left(ts_interp - 1)
-        ts_floor = media_list[index_floor].timestamp
-        ts_ceil = media_list[index_ceil].timestamp
-        if ts_ceil - ts_floor != 0:
-            w = (ts_interp - ts_floor) / (ts_ceil - ts_floor)
+        # print("New stripe:")
+        # print("Line ", n, " out of ", canvas.shape[0])
+        ts_interp = n / (canvas.shape[0] - 1) * (hi - lo) + lo
+        index_floor = media_list.bisect_key_left(ts_interp + 0.001) - 1
+        index_ceil = media_list.bisect_key_left(ts_interp - 0.001)
+        ts_floor = media_list[index_floor].strip_position
+        ts_ceil = media_list[index_ceil].strip_position
+        # print("ts_interp:", ts_interp)
+        # print("lo, hi: ", lo, hi)
+        # print("ts_floor:", ts_floor)
+        # print("ts_ceil:", ts_ceil)
+        # print("index_floor:", index_floor)
+        # print("index_ceil:", index_ceil)
+
+        if style == 1:
+            canvas[n] = media_list[index_floor].strip
+
         else:
-            w = 1
-        weight_floor = (1-w) ** GRADIENT_DEGREE_FLOOR
-        weight_ceil = w ** GRADIENT_DEGREE_CEIL
-        canvas[n] = media_list[index_floor].strip * weight_floor \
-            + media_list[index_ceil].strip * weight_ceil \
-            + canvas[n] * (1 - weight_floor - weight_ceil)
+            if ts_ceil - ts_floor != 0:
+                w = (ts_interp - ts_floor) / (ts_ceil - ts_floor)
+            else:
+                w = 1
+            weight_floor = (1 - w) ** GRADIENT_DEGREE_FLOOR
+            weight_ceil = w ** GRADIENT_DEGREE_CEIL
+            canvas[n] = media_list[index_floor].strip * weight_floor \
+                + media_list[index_ceil].strip * weight_ceil \
+                + canvas[n] * (1 - weight_floor - weight_ceil)
 
     return canvas
 
 
-def draw(media_list: SortedKeyList[Media]) -> np.array:
+def draw(media_list: SortedKeyList[Media], canvas_width: int, canvas_height: int) -> np.array:
     if len(media_list) < 2:
         raise ValueError('Not enough images')
 
     # draw gradient
-    canvas = np.full((CANVAS_WIDTH, CANVAS_HEIGHT, 3), 0, dtype=float)
+    canvas = np.full((canvas_width, canvas_height, 3), 0, dtype=float)
     canvas = _insert_gradient(canvas, media_list)
-    # draw glowing strips
-    layer = np.full((CANVAS_WIDTH, CANVAS_HEIGHT, 3), 0, dtype=float)
+    # draw strips on a separate layer
+    layer = np.full((canvas_width, canvas_height, 3), 0, dtype=float)
     _insert_strips(layer, media_list)
     layer = filters.gaussian(layer, 10, channel_axis=2)
     _insert_strips(layer, media_list)
     layer = filters.gaussian(layer, 3, channel_axis=2)
     _insert_strips(layer, media_list)
     # blend (screen mode)
-    canvas = 1 - (1-canvas) * (1-layer)
+    # canvas = 1 - (1-canvas) * (1-layer)
     # post-processing
     canvas = _post_process(canvas)
     # swap rows and columns
@@ -92,5 +103,5 @@ def draw(media_list: SortedKeyList[Media]) -> np.array:
     return canvas
 
 
-def save_on_disk(canvas: np.array):
-    io.imsave('./out.jpg', canvas)
+def save_on_disk(account_id: str, canvas: np.array):
+    io.imsave(f"./{account_id}.jpg", canvas)
