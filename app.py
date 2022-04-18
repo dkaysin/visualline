@@ -5,6 +5,7 @@ import requests as req
 from os import environ
 from markupsafe import escape
 from sortedcontainers import SortedList, SortedKeyList
+import asyncio as aio
 import time
 
 from draw import draw, save_on_disk
@@ -134,13 +135,17 @@ async def serve_image():
     else:
         style = int(style)
 
-    if ('user_id' not in session) or ('access_token' not in session):
-        return {
-            "error_type": "AuthRequired",
-            "error_message": "User is not authenticated"
-        }
-    user_id = session['user_id']
-    access_token = session['access_token']
+    # if ('user_id' not in session) or ('access_token' not in session):
+    #     return {
+    #         "error_type": "AuthRequired",
+    #         "error_message": "User is not authenticated"
+    #     }
+    # user_id = session['user_id']
+    # access_token = session['access_token']
+
+    user_id = "17841400819370683"
+    access_token = "IGQVJVdWtid3ZAtQnNEb2pxVkgyajNLQlVpZAFBNcFBvVzczNkRUWjFTSlFMY1QyeU9JbEtWWE5DOHpTSm1Cc3JLUmJGbFVlaGd2SjV4Q0txYjN2MVp6T3lpN3NLRkZAYQUpIMHBfTkhpeFhfRFIzdFpCUAZDZD"
+
 
     print("preparation time: --- %s seconds ---" % (time.time() - start_time))
 
@@ -157,11 +162,11 @@ async def serve_image():
 
     start_time = time.time()
     output = io.BytesIO()
-    iio.imwrite(output, canvas, format_hint=".jpeg")
+    iio.imwrite(output, canvas, format_hint=".jpg")
     output.seek(0)
     gc.collect()
     print("image delivery execution time: --- %s seconds ---" % (time.time() - start_time))
-    return send_file(output, mimetype='image/jpeg')
+    return send_file(output, mimetype='image/jpg')
 
 
 if __name__ == '__main__':

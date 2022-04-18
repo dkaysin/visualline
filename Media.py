@@ -11,25 +11,32 @@ from PIL import Image
 
 async def parse_media(sem, client, payload, CANVAS_HEIGHT):
     media = Media(payload)
-    if media.media_type in ["IMAGE", "CAROUSEL_ALBUM"]:
-        url = payload.get('media_url')
-        image = None
-        tries = 0
-        async with sem:
-            while (image is None) and (tries <= 5):
-                tries += 1
-                # print(f"Fetching media {media.media_id} from {media.media_url}. Try: {tries}")
-                try:
-                    response = await client.get(url)
-                    img_bytes = response.content
-                    image = iio.imread(img_bytes)
-                    # image = img_as_float(iio.imread(img_bytes))
-                except Exception:  # TODO more specific exception must be used
-                    # await aio.sleep(0.1 * 2**tries)
-                    await aio.sleep(0.1)
-            if image is not None:
-                media.strip = generate_strip(image, CANVAS_HEIGHT)
-                return media
+
+    image = None
+    try:
+        image = iio.imread(f"./cached/{media.media_id}.jpg")
+        print("Fetched from disk: ", media.media_id)
+    except Exception as err:
+        print(err)
+        if media.media_type in ["IMAGE", "CAROUSEL_ALBUM"]:
+            url = payload.get('media_url')
+            tries = 0
+            async with sem:
+                while (image is None) and (tries <= 5):
+                    tries += 1
+                    # print(f"Fetching media {media.media_id} from {media.media_url}. Try: {tries}")
+                    try:
+                        response = await client.get(url)
+                        img_bytes = response.content
+                        image = iio.imread(img_bytes)
+                        # image = img_as_float(iio.imread(img_bytes))
+                        iio.imwrite(f"./cached/{media.media_id}.jpg", image, format_hint=".jpg")
+                    except Exception:  # TODO more specific exception must be used
+                        # await aio.sleep(0.1 * 2**tries)
+                        await aio.sleep(0.1)
+    if image is not None:
+        media.strip = generate_strip(image, CANVAS_HEIGHT)
+        return media
     print(f"Media {media.media_id} skipped: ", media.media_id)
     return None
 
@@ -64,10 +71,11 @@ def generate_strip(image: np.array, CANVAS_HEIGHT: int) -> np.array:
     # strip_blur_radius = CANVAS_HEIGHT / 20
     # strip = ndi.gaussian_filter1d(strip, sigma=strip_blur_radius, axis=0)
 
-    thumbnail = ndi.zoom(image, (150/image.shape[0], 500/image.shape[0], 1), order=1)
-    strip = np.array([_get_dominant_color(np.array(chunk)) for chunk in chunked(thumbnail, 10)], dtype=np.uint8)
+    thumbnail = ndi.zoom(image, (300/image.shape[0], 200/image.shape[0], 1), order=1)
+    strip = np.array([_get_dominant_color(np.array(chunk)) for chunk in chunked(thumbnail, 20)], dtype=np.uint8)
     strip = ndi.gaussian_filter1d(strip, sigma=1, axis=0)
     strip = ndi.zoom(strip, (CANVAS_HEIGHT / strip.shape[0], 1), order=1)
+    # strip = ndi.gaussian_filter1d(strip, sigma=CANVAS_HEIGHT / 20, axis=0)
     strip = strip / 255.
 
     return strip
