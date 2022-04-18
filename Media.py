@@ -69,20 +69,20 @@ def generate_strip(image: np.array, CANVAS_HEIGHT: int) -> np.array:
     if image is None:
         raise ValueError("Image provided to generate_strip is None")
 
-    # subsampling = int(image.shape[1] / 200)
-    # image = img_as_float(image)
-    # strip = np.median(image[::subsampling, ::subsampling, ::], axis=1)
-    # if strip.shape[0] != CANVAS_HEIGHT:
-    #     strip = ndi.zoom(strip, (CANVAS_HEIGHT / strip.shape[0], 1), order=1)
-    # strip_blur_radius = CANVAS_HEIGHT / 20
-    # strip = ndi.gaussian_filter1d(strip, sigma=strip_blur_radius, axis=0)
+    subsampling = int(image.shape[1] / 200)
+    image = img_as_float(image)
+    strip = np.median(image[::subsampling, ::subsampling, ::], axis=1)
+    if strip.shape[0] != CANVAS_HEIGHT:
+        strip = ndi.zoom(strip, (CANVAS_HEIGHT / strip.shape[0], 1), order=1)
+    strip_blur_radius = CANVAS_HEIGHT / 20
+    strip = ndi.gaussian_filter1d(strip, sigma=strip_blur_radius, axis=0)
 
-    thumbnail = ndi.zoom(image, (50/image.shape[0], 100/image.shape[0], 1), order=1)
-    strip = np.array([_get_dominant_color(np.array(chunk)) for chunk in chunked(thumbnail, 5)], dtype=np.uint8)
-    strip = ndi.gaussian_filter1d(strip, sigma=1, axis=0)
-    strip = ndi.zoom(strip, (CANVAS_HEIGHT / strip.shape[0], 1), order=1)
-    # strip = ndi.gaussian_filter1d(strip, sigma=CANVAS_HEIGHT / 20, axis=0)
-    strip = strip / 255.
+    # thumbnail = ndi.zoom(image, (50/image.shape[0], 100/image.shape[0], 1), order=1)
+    # strip = np.array([_get_dominant_color(np.array(chunk)) for chunk in chunked(thumbnail, 5)], dtype=np.uint8)
+    # strip = ndi.gaussian_filter1d(strip, sigma=1, axis=0)
+    # strip = ndi.zoom(strip, (CANVAS_HEIGHT / strip.shape[0], 1), order=1)
+    # # strip = ndi.gaussian_filter1d(strip, sigma=CANVAS_HEIGHT / 20, axis=0)
+    # strip = strip / 255.
 
     return strip
 
@@ -103,13 +103,9 @@ def _get_dominant_color(image):
     img = Image.fromarray(image, 'RGB')
     paletted = img.convert('P', palette=Image.ADAPTIVE, colors=8)
     palette = list(chunked(paletted.getpalette(), 3))
-    # print("palette: ", palette)
-
     dominant_color = max(paletted.getcolors(), key=lambda pair: pair[0] * _saturation_key(palette[pair[1]]))
-    # print("mx_col: ", mx_col)
-
     return palette[dominant_color[1]]
-    # return np.median(image, axis=(0,1))
+
 
 # if __name__ == '__main__':
 #     pass
