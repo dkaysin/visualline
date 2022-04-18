@@ -39,7 +39,7 @@ def _fetch_user_media(_user_id: str, access_token: str) -> dict:
     return response
 
 
-async def get_media_list(user_id: str, access_token: str) -> [Media]:
+async def get_media_list(user_id: str, access_token: str, CANVAS_HEIGHT: int) -> [Media]:
     response = _fetch_user_media(user_id, access_token)
     # print(response)
     if "error" in response:
@@ -53,19 +53,20 @@ async def get_media_list(user_id: str, access_token: str) -> [Media]:
 
     sem = aio.Semaphore(MAX_SIMULT_REQUESTS)
     for media in data:
-        tasks.append(aio.create_task(parse_media(sem, client, media)))
+        tasks.append(aio.create_task(parse_media(sem, client, media, CANVAS_HEIGHT)))
 
     while response.get("paging").get("next") is not None:
         response = req.get(response["paging"]["next"]).json()
         data = response.get("data")
         for media in data:
-            tasks.append(aio.create_task(parse_media(sem, client, media)))
+            tasks.append(aio.create_task(parse_media(sem, client, media, CANVAS_HEIGHT)))
 
     res = await aio.gather(*tasks)
     await client.aclose()
     res = [m for m in res if m is not None]
     res = sorted(res, key=lambda m: m.strip_position)
     res = _generate_strip_positions(res)
+    print("Collected media: ", len(res))
     return res
 
 
@@ -76,7 +77,8 @@ def _generate_strip_positions(media_list: [Media]) -> [Media]:
         else:
             prev_media = media_list[i-1]
             delta = media.timestamp - prev_media.timestamp
-            delta_log = math.log(delta)
+            # delta_log = min(delta, 60*60*24*10) ** 0.25
+            delta_log = (1+math.log(1+delta))**1.5
             media.strip_position = prev_media.strip_position + delta_log
     return media_list
 

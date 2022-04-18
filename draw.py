@@ -11,8 +11,8 @@ from Media import Media
 
 BG_GAMMA_FACTOR = 0.25
 
-GRADIENT_DEGREE_FLOOR = 1.5
-GRADIENT_DEGREE_CEIL = 3
+GRADIENT_DEGREE_FLOOR = 0.75
+GRADIENT_DEGREE_CEIL = 4
 
 PP_SATURATION_GAIN = 1.3
 
@@ -55,7 +55,7 @@ def _insert_gradient(canvas: np.array, media_list: SortedKeyList[Media], style: 
         ts_ceil = media_list[index_ceil].strip_position
 
         if style == 1:
-            canvas[n] = media_list[index_floor].strip*0.8
+            canvas[n] = media_list[index_floor].strip * 0.8
 
         else:
             if ts_ceil - ts_floor != 0:
@@ -80,10 +80,10 @@ def draw(media_list: SortedKeyList[Media], canvas_width: int, canvas_height: int
     if style == 1:
         _insert_strips(layer, media_list)
         layer = filters.gaussian(layer, 10, channel_axis=2, mode="constant")
-        layer *= 2
+        layer *= 1.5
         _insert_strips(layer, media_list)
         layer = filters.gaussian(layer, 3, channel_axis=2, mode="constant")
-        layer *= 2
+        layer *= 1.5
         _insert_strips(layer, media_list)
         layer *= 0.8
     else:
@@ -92,7 +92,6 @@ def draw(media_list: SortedKeyList[Media], canvas_width: int, canvas_height: int
         _insert_strips(layer, media_list)
         layer = filters.gaussian(layer, 3, channel_axis=2, mode="constant")
         _insert_strips(layer, media_list)
-        layer *= 0.8
     # blend (screen mode)
     canvas = 1 - (1-canvas) * (1-layer)
     # post-processing
@@ -102,6 +101,7 @@ def draw(media_list: SortedKeyList[Media], canvas_width: int, canvas_height: int
     # Convert from float[-1.,1.] to uint8[0,255]
     canvas = img_as_ubyte(canvas)
     return canvas
+
 
 def save_on_disk(account_id: str, canvas: np.array):
     io.imsave(f"./{account_id}.jpg", canvas)

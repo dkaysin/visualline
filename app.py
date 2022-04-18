@@ -11,8 +11,8 @@ import time
 from draw import draw, save_on_disk
 from data import get_media_list
 
-CANVAS_WIDTH = 1000
-CANVAS_HEIGHT = 1000
+CANVAS_WIDTH = 800
+CANVAS_HEIGHT = 800
 
 
 app = Flask(__name__)
@@ -25,6 +25,7 @@ AUTH_REDIRECT_URL = APP_URL+"/auth/"
 FB_AUTH_URL = "https://api.instagram.com/oauth/authorize"
 FB_ACCESS_TOKEN_URL = "https://api.instagram.com/oauth/access_token"
 
+
 import gc
 import os
 import tracemalloc
@@ -33,9 +34,12 @@ process = psutil.Process(os.getpid())
 tracemalloc.start()
 s = None
 
-@app.route('/memory')
+
+@app.route("/memory")
 def print_memory():
-    return {'memory': process.memory_info().rss}
+    return {
+        "memory": process.memory_info().rss,
+        }
 
 
 @app.route("/snapshot")
@@ -143,7 +147,7 @@ async def serve_image():
 
     start_time = time.time()
     media_list = SortedKeyList(
-        await get_media_list(user_id, access_token),
+        await get_media_list(user_id, access_token, CANVAS_HEIGHT),
         key=lambda m: m.strip_position
     )
     print("<get_media_list> execution time: --- %s seconds ---" % (time.time() - start_time))
