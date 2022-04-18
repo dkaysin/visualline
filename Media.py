@@ -1,5 +1,3 @@
-from skimage.util import img_as_ubyte, img_as_float
-from scipy import ndimage as ndi
 import numpy as np
 from datetime import datetime
 import imageio.v3 as iio
@@ -87,7 +85,7 @@ def generate_strip(image: Image.Image, CANVAS_HEIGHT: int) -> np.array:
     stride = thumb_width//bands
     arr = []
     for n in range(0, thumb_width, stride):
-        strip = image.crop((0, n, thumb_height-1, n+stride))
+        strip = image.crop((0, n, thumb_height, n+stride))
         arr.append(_get_dominant_color(strip))
 
     stripe = Image.fromarray(np.array([arr], dtype=np.uint8), mode="RGB")
@@ -99,9 +97,6 @@ def generate_strip(image: Image.Image, CANVAS_HEIGHT: int) -> np.array:
     # strip = ndi.zoom(strip, (CANVAS_HEIGHT / strip.shape[0], 1), order=1)
     # # strip = ndi.gaussian_filter1d(strip, sigma=CANVAS_HEIGHT / 20, axis=0)
     # strip = strip / 255.
-
-    # print(res)
-    # print(np.asarray(res))
 
     return np.array(res)[0]/255
 
