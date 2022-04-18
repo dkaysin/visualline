@@ -158,11 +158,11 @@ async def serve_image():
 
     start_time = time.time()
     output = io.BytesIO()
-    iio.imwrite(output, canvas, format_hint=".jpg")
+    iio.imwrite(output, canvas, format_hint=".jpeg")
     output.seek(0)
     gc.collect()
     print("image delivery execution time: --- %s seconds ---" % (time.time() - start_time))
-    return send_file(output, mimetype='image/jpg')
+    return send_file(output, mimetype='image/jpeg')
 
 
 if __name__ == '__main__':
