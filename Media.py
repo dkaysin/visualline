@@ -4,10 +4,11 @@ import imageio.v3 as iio
 import asyncio as aio
 from more_itertools import chunked
 import io
+import os
 
 from PIL import Image, ImageFilter
 
-DEBUG_MODE = False # os.environ.get('DEBUG_MODE') == "True"
+DEBUG_MODE = os.environ.get('DEBUG_MODE') == "True"
 
 THUMB_WIDTH = 100
 THUMB_HEIGHT = 50
@@ -19,7 +20,7 @@ async def parse_media(sem, client, payload, CANVAS_HEIGHT):
 
     if DEBUG_MODE:
         try:
-            image = Image.open(f"./cached/{media.media_id}.jpg").resize((THUMB_WIDTH, THUMB_HEIGHT), resample=Image.Resampling.NEAREST)
+            image = Image.open(f"./cached/{media.media_id}.jpg").resize((THUMB_WIDTH, THUMB_HEIGHT), resample=Image.NEAREST)
             # print("Fetched from disk: ", media.media_id)
         except Exception:
             pass
@@ -34,7 +35,7 @@ async def parse_media(sem, client, payload, CANVAS_HEIGHT):
                 try:
                     response = await client.get(url)
                     img_bytes = io.BytesIO(response.content)
-                    image = Image.open(img_bytes).resize((THUMB_WIDTH, THUMB_HEIGHT), resample=Image.Resampling.NEAREST)
+                    image = Image.open(img_bytes).resize((THUMB_WIDTH, THUMB_HEIGHT), resample=Image.NEAREST)
                     if DEBUG_MODE:
                         iio.imwrite(f"./cached/{media.media_id}.jpg", image, format_hint=".jpg")
                 except Exception as err:  # TODO more specific exception must be used
@@ -90,7 +91,7 @@ def generate_strip(image: Image.Image, CANVAS_HEIGHT: int) -> np.array:
 
     stripe = Image.fromarray(np.array([arr], dtype=np.uint8), mode="RGB")
     blurred_stripe = stripe.filter(ImageFilter.BoxBlur(1))
-    res = blurred_stripe.resize((CANVAS_HEIGHT, 1), resample=Image.Resampling.BILINEAR)
+    res = blurred_stripe.resize((CANVAS_HEIGHT, 1), resample=Image.BILINEAR)
 
     # strip = np.array([_get_dominant_color(np.array(chunk)) for chunk in chunked(image, 5)], dtype=np.uint8)
     # strip = ndi.gaussian_filter1d(strip, sigma=1, axis=0)
