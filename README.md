@@ -4,5 +4,4 @@ Stack:
 - Back-end: Python, scikit-image, scipy, flask, asyncio, httpx
 - Front-end: TBD
 
-Example: 
-[exmaple]: https://github.com/dkaysin/visualline/blob/main/out.jpg "Example"
+Example: https://github.com/dkaysin/visualline/blob/main/out.jpg
