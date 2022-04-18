@@ -7,9 +7,12 @@ import asyncio as aio
 from more_itertools import chunked
 import os
 
-from PIL import Image
+from PIL import Image, ImageFilter
 
 DEBUG_MODE = os.environ.get('DEBUG_MODE') == "True"
+
+THUMB_WIDTH = 100
+THUMB_HEIGHT = 50
 
 
 async def parse_media(sem, client, payload, CANVAS_HEIGHT):
@@ -18,7 +21,7 @@ async def parse_media(sem, client, payload, CANVAS_HEIGHT):
 
     if DEBUG_MODE:
         try:
-            image = iio.imread(f"./cached/{media.media_id}.jpg")
+            image = Image.open(f"./cached/{media.media_id}.jpg").resize((THUMB_WIDTH, THUMB_HEIGHT), resample=Image.Resampling.NEAREST)
             # print("Fetched from disk: ", media.media_id)
         except Exception:
             pass
@@ -33,9 +36,10 @@ async def parse_media(sem, client, payload, CANVAS_HEIGHT):
                 try:
                     response = await client.get(url)
                     img_bytes = response.content
-                    image = iio.imread(img_bytes)
+                    image = Image.open(img_bytes).resize((THUMB_WIDTH, THUMB_HEIGHT), resample=Image.Resampling.NEAREST)
                     # image = img_as_float(iio.imread(img_bytes))
-                    iio.imwrite(f"./cached/{media.media_id}.jpg", image, format_hint=".jpg")
+                    if DEBUG_MODE:
+                        iio.imwrite(f"./cached/{media.media_id}.jpg", image, format_hint=".jpg")
                 except Exception:  # TODO more specific exception must be used
                     # await aio.sleep(0.1 * 2**tries)
                     await aio.sleep(0.1)
@@ -65,7 +69,7 @@ class Media:
         return f"id: {self.media_id}, Timestamp: {self.timestamp}, strip_position: {self.strip_position}, strip: {self.strip}"
 
 
-def generate_strip(image: np.array, CANVAS_HEIGHT: int) -> np.array:
+def generate_strip(image: Image.Image, CANVAS_HEIGHT: int) -> np.array:
     if image is None:
         raise ValueError("Image provided to generate_strip is None")
 
@@ -77,14 +81,29 @@ def generate_strip(image: np.array, CANVAS_HEIGHT: int) -> np.array:
     # strip_blur_radius = CANVAS_HEIGHT / 20
     # strip = ndi.gaussian_filter1d(strip, sigma=strip_blur_radius, axis=0)
 
-    thumbnail = ndi.zoom(image, (50/image.shape[0], 100/image.shape[0], 1), order=1)
-    strip = np.array([_get_dominant_color(np.array(chunk)) for chunk in chunked(thumbnail, 5)], dtype=np.uint8)
-    strip = ndi.gaussian_filter1d(strip, sigma=1, axis=0)
-    strip = ndi.zoom(strip, (CANVAS_HEIGHT / strip.shape[0], 1), order=1)
-    # strip = ndi.gaussian_filter1d(strip, sigma=CANVAS_HEIGHT / 20, axis=0)
-    strip = strip / 255.
+    bands = 10
+    thumb_height = image.size[0]
+    thumb_width = image.size[1]
+    stride = thumb_width//bands
+    arr = []
+    for n in range(0, thumb_width, stride):
+        strip = image.crop((0, n, thumb_height-1, n+stride))
+        arr.append(_get_dominant_color(strip))
 
-    return strip
+    stripe = Image.fromarray(np.array([arr], dtype=np.uint8), mode="RGB")
+    blurred_stripe = stripe.filter(ImageFilter.BoxBlur(1))
+    res = blurred_stripe.resize((CANVAS_HEIGHT, 1), resample=Image.Resampling.BILINEAR)
+
+    # strip = np.array([_get_dominant_color(np.array(chunk)) for chunk in chunked(image, 5)], dtype=np.uint8)
+    # strip = ndi.gaussian_filter1d(strip, sigma=1, axis=0)
+    # strip = ndi.zoom(strip, (CANVAS_HEIGHT / strip.shape[0], 1), order=1)
+    # # strip = ndi.gaussian_filter1d(strip, sigma=CANVAS_HEIGHT / 20, axis=0)
+    # strip = strip / 255.
+
+    # print(res)
+    # print(np.asarray(res))
+
+    return np.array(res)[0]/255
 
 
 def _saturation_key(rgb):
@@ -99,9 +118,8 @@ def _saturation_key(rgb):
     return sat * 0.8 + 0.2
 
 
-def _get_dominant_color(image):
-    img = Image.fromarray(image, 'RGB')
-    paletted = img.convert('P', palette=Image.ADAPTIVE, colors=8)
+def _get_dominant_color(image: Image.Image):
+    paletted = image.convert('P', palette=Image.ADAPTIVE, colors=8)
     palette = list(chunked(paletted.getpalette(), 3))
     dominant_color = max(paletted.getcolors(), key=lambda pair: pair[0] * _saturation_key(palette[pair[1]]))
     return palette[dominant_color[1]]
