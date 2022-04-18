@@ -44,7 +44,7 @@ def _insert_strips(canvas: np.array, media_list: SortedKeyList[Media]) -> np.arr
         canvas[n] = media.strip
 
 
-def _insert_gradient(canvas: np.array, media_list: SortedKeyList[Media], style: int) -> np.array:
+def _insert_gradient(canvas: np.array, media_list: SortedKeyList[Media], style: int):
     positions = [m.strip_position for m in media_list]
     lo, hi = min(positions), max(positions)
     for n, col in enumerate(canvas):
@@ -55,7 +55,7 @@ def _insert_gradient(canvas: np.array, media_list: SortedKeyList[Media], style: 
         ts_ceil = media_list[index_ceil].strip_position
 
         if style == 1:
-            canvas[n] = media_list[index_floor].strip * 0.6
+            canvas[n] = media_list[index_floor].strip*0.8
 
         else:
             if ts_ceil - ts_floor != 0:
@@ -68,17 +68,14 @@ def _insert_gradient(canvas: np.array, media_list: SortedKeyList[Media], style: 
                 + media_list[index_ceil].strip * weight_ceil \
                 + canvas[n] * (1 - weight_floor - weight_ceil)
 
-    return canvas
-
 
 def draw(media_list: SortedKeyList[Media], canvas_width: int, canvas_height: int, style: int) -> np.array:
-    start_time = time.time()
     if len(media_list) < 2:
         raise ValueError('Not enough images')
 
     # draw gradient
     canvas = np.full((canvas_width, canvas_height, 3), 0, dtype=float)
-    canvas = _insert_gradient(canvas, media_list, style)
+    _insert_gradient(canvas, media_list, style)
     layer = np.full((canvas_width, canvas_height, 3), 0, dtype=float)
     if style == 1:
         _insert_strips(layer, media_list)
@@ -99,12 +96,11 @@ def draw(media_list: SortedKeyList[Media], canvas_width: int, canvas_height: int
     # blend (screen mode)
     canvas = 1 - (1-canvas) * (1-layer)
     # post-processing
-    # canvas = _post_process(canvas)
+    canvas = _post_process(canvas)
     # swap rows and columns
     canvas = np.transpose(canvas, (1, 0, 2))
     # Convert from float[-1.,1.] to uint8[0,255]
     canvas = img_as_ubyte(canvas)
-    print("<draw> execution time: --- %s seconds ---" % (time.time() - start_time))
     return canvas
 
 def save_on_disk(account_id: str, canvas: np.array):

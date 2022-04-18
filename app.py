@@ -6,7 +6,7 @@ from os import environ
 from markupsafe import escape
 from sortedcontainers import SortedList, SortedKeyList
 import asyncio as aio
-
+import time
 
 from draw import draw, save_on_disk
 from data import get_media_list
@@ -24,6 +24,38 @@ APP_URL = "https://visualline.herokuapp.com"
 AUTH_REDIRECT_URL = APP_URL+"/auth/"
 FB_AUTH_URL = "https://api.instagram.com/oauth/authorize"
 FB_ACCESS_TOKEN_URL = "https://api.instagram.com/oauth/access_token"
+
+import gc
+import os
+import tracemalloc
+import psutil
+process = psutil.Process(os.getpid())
+tracemalloc.start()
+s = None
+
+@app.route('/memory')
+def print_memory():
+    return {'memory': process.memory_info().rss}
+
+
+@app.route("/snapshot")
+def snap():
+    global s
+    if not s:
+        s = tracemalloc.take_snapshot()
+        return "taken snapshot\n"
+    else:
+        snapshot = tracemalloc.take_snapshot()
+        top_stats = snapshot.statistics('lineno')
+        compared = snapshot.compare_to(s, 'lineno')
+        return f"""
+            <p>Top stats:</p>
+            {"".join([f"<p> {str(line)} </p>" for line in top_stats[:10]])}
+            <br/>
+            <p>Compared:</p>
+            {"".join([f"<p> {str(line)} </p>" for line in compared[:10]])}
+        """
+
 
 
 # TODO move to frontend
@@ -92,11 +124,11 @@ def index():
 
 @app.route("/fetch/")
 async def serve_image():
+    start_time = time.time()
     style = request.args.get('style')
     if style is None:
         style = 0
     else:
-        await aio.sleep(4)
         style = int(style)
 
     if ('user_id' not in session) or ('access_token' not in session):
@@ -107,15 +139,25 @@ async def serve_image():
     user_id = session['user_id']
     access_token = session['access_token']
 
+    print("preparation time: --- %s seconds ---" % (time.time() - start_time))
+
+    start_time = time.time()
     media_list = SortedKeyList(
         await get_media_list(user_id, access_token),
         key=lambda m: m.strip_position
     )
-    canvas = draw(media_list, CANVAS_WIDTH, CANVAS_HEIGHT, style)
+    print("<get_media_list> execution time: --- %s seconds ---" % (time.time() - start_time))
 
+    start_time = time.time()
+    canvas = draw(media_list, CANVAS_WIDTH, CANVAS_HEIGHT, style)
+    print("<draw> execution time: --- %s seconds ---" % (time.time() - start_time))
+
+    start_time = time.time()
     output = io.BytesIO()
     iio.imwrite(output, canvas, format_hint=".jpg")
     output.seek(0)
+    gc.collect()
+    print("image delivery execution time: --- %s seconds ---" % (time.time() - start_time))
     return send_file(output, mimetype='image/jpg')
 
 

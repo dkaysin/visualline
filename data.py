@@ -7,7 +7,7 @@ import math
 
 from Media import Media, parse_media
 
-
+MAX_SIMULT_REQUESTS = 10
 FB_GRAPH_URL = "https://graph.instagram.com"
 
 
@@ -40,8 +40,6 @@ def _fetch_user_media(_user_id: str, access_token: str) -> dict:
 
 
 async def get_media_list(user_id: str, access_token: str) -> [Media]:
-    start_time = time.time()
-
     response = _fetch_user_media(user_id, access_token)
     # print(response)
     if "error" in response:
@@ -53,22 +51,21 @@ async def get_media_list(user_id: str, access_token: str) -> [Media]:
     client = httpx.AsyncClient()
     tasks = []
 
+    sem = aio.Semaphore(MAX_SIMULT_REQUESTS)
     for media in data:
-        tasks.append(aio.create_task(parse_media(client, media)))
+        tasks.append(aio.create_task(parse_media(sem, client, media)))
 
     while response.get("paging").get("next") is not None:
-        print("Accessing next page of data")
         response = req.get(response["paging"]["next"]).json()
         data = response.get("data")
         for media in data:
-            tasks.append(aio.create_task(parse_media(client, media)))
+            tasks.append(aio.create_task(parse_media(sem, client, media)))
 
     res = await aio.gather(*tasks)
+    await client.aclose()
     res = [m for m in res if m is not None]
     res = sorted(res, key=lambda m: m.strip_position)
     res = _generate_strip_positions(res)
-
-    print("<get_media_list> execution time: --- %s seconds ---" % (time.time() - start_time))
     return res
 
 

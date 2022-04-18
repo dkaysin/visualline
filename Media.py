@@ -10,25 +10,26 @@ CANVAS_HEIGHT = 1000
 STRIP_BLUR_RADIUS = CANVAS_HEIGHT / 20
 
 
-async def parse_media(client, payload):
+async def parse_media(sem, client, payload):
     media = Media(payload)
     if media.media_type in ["IMAGE", "CAROUSEL_ALBUM"]:
         url = payload.get('media_url')
         image = None
         tries = 0
-        while (image is None) and (tries <= 5):
-            tries += 1
-            print(f"Fetching media {media.media_id} from {media.media_url}. Try: {tries}")
-            try:
-                response = await client.get(url)
-                img_bytes = response.content
-                image = img_as_float(iio.imread(img_bytes))
-            except Exception:  # TODO more specific exception must be used
-                # await aio.sleep(0.1 * 2**tries)
-                await aio.sleep(0.1)
-        if image is not None:
-            media.strip = generate_strip(image)
-            return media
+        async with sem:
+            while (image is None) and (tries <= 5):
+                tries += 1
+                # print(f"Fetching media {media.media_id} from {media.media_url}. Try: {tries}")
+                try:
+                    response = await client.get(url)
+                    img_bytes = response.content
+                    image = img_as_float(iio.imread(img_bytes))
+                except Exception:  # TODO more specific exception must be used
+                    # await aio.sleep(0.1 * 2**tries)
+                    await aio.sleep(0.1)
+            if image is not None:
+                media.strip = generate_strip(image)
+                return media
     print(f"Media {media.media_id} skipped: ", media.media_id)
     return None
 
@@ -52,8 +53,8 @@ class Media:
 
 
 def generate_strip(image: np.array) -> np.array:
-    subsampling = 5
     start_time = time.time()
+    subsampling = 5
     if image is None:
         raise ValueError("Image provided to generate_strip is None")
     strip = np.median(image[::subsampling, ::subsampling, ::], axis=1)
@@ -62,7 +63,7 @@ def generate_strip(image: np.array) -> np.array:
     if image.shape[0] != CANVAS_HEIGHT:
         strip = ndi.zoom(strip, (CANVAS_HEIGHT / strip.shape[0], 1))
     strip = ndi.gaussian_filter1d(strip, sigma=STRIP_BLUR_RADIUS, axis=0)
-    print("<generate_strip> execution time: --- %s seconds ---" % (time.time() - start_time))
+    # print("<generate_strip> execution time: --- %s seconds ---" % (time.time() - start_time))
     return strip
 
 
