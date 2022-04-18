@@ -3,11 +3,11 @@ from datetime import datetime
 import imageio.v3 as iio
 import asyncio as aio
 from more_itertools import chunked
-import os
+import io
 
 from PIL import Image, ImageFilter
 
-DEBUG_MODE = os.environ.get('DEBUG_MODE') == "True"
+DEBUG_MODE = False # os.environ.get('DEBUG_MODE') == "True"
 
 THUMB_WIDTH = 100
 THUMB_HEIGHT = 50
@@ -33,12 +33,12 @@ async def parse_media(sem, client, payload, CANVAS_HEIGHT):
                 # print(f"Fetching media {media.media_id} from {media.media_url}. Try: {tries}")
                 try:
                     response = await client.get(url)
-                    img_bytes = response.content
+                    img_bytes = io.BytesIO(response.content)
                     image = Image.open(img_bytes).resize((THUMB_WIDTH, THUMB_HEIGHT), resample=Image.Resampling.NEAREST)
-                    # image = img_as_float(iio.imread(img_bytes))
                     if DEBUG_MODE:
                         iio.imwrite(f"./cached/{media.media_id}.jpg", image, format_hint=".jpg")
-                except Exception:  # TODO more specific exception must be used
+                except Exception as err:  # TODO more specific exception must be used
+                    print(err)
                     # await aio.sleep(0.1 * 2**tries)
                     await aio.sleep(0.1)
 
