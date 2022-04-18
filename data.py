@@ -2,7 +2,6 @@ from sortedcontainers import SortedKeyList
 import requests as req
 import asyncio as aio
 import httpx
-import time
 import math
 
 from Media import Media, parse_media

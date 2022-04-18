@@ -4,7 +4,6 @@ import numpy as np
 from datetime import datetime
 import imageio.v3 as iio
 import asyncio as aio
-import time
 from more_itertools import chunked
 
 from PIL import Image

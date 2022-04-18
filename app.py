@@ -5,7 +5,6 @@ import requests as req
 from os import environ
 from markupsafe import escape
 from sortedcontainers import SortedList, SortedKeyList
-import asyncio as aio
 import time
 
 from draw import draw, save_on_disk
