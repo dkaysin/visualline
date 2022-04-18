@@ -1,25 +1,24 @@
 from flask import Flask, send_file, request, session, redirect, url_for
 import imageio.v3 as iio
 import io
-import requests as req
-from os import environ
+import os
 from markupsafe import escape
-from sortedcontainers import SortedList, SortedKeyList
-import asyncio as aio
+from sortedcontainers import SortedKeyList
 import time
+import httpx
 
 from draw import draw, save_on_disk
 from data import get_media_list
 
 CANVAS_WIDTH = 800
 CANVAS_HEIGHT = 800
-
+DEBUG_MODE = os.environ.get('DEBUG_MODE') == "True"
 
 app = Flask(__name__)
 app.secret_key = b'sf423ef24378y'  # TODO replace with dynamically generated key on a per-person basis
 
 APP_ID = "1113503899492527"
-FB_VISUALLINE_APP_SECRET = environ.get('FB_VISUALLINE_APP_SECRET')
+FB_VISUALLINE_APP_SECRET = os.environ.get('FB_VISUALLINE_APP_SECRET')
 APP_URL = "https://visualline.herokuapp.com"
 AUTH_REDIRECT_URL = APP_URL+"/auth/"
 FB_AUTH_URL = "https://api.instagram.com/oauth/authorize"
@@ -61,7 +60,6 @@ def snap():
         """
 
 
-
 # TODO move to frontend
 @app.route("/login/")
 def request_login():
@@ -74,7 +72,8 @@ def request_login():
 
 
 @app.route("/auth/")
-def auth():
+async def auth():
+    client = httpx.AsyncClient()
     code = request.args.get('code')
     if code is None:
         return {
@@ -90,7 +89,7 @@ def auth():
         'redirect_uri': AUTH_REDIRECT_URL,
         'code': code
     }
-    response = req.post(FB_ACCESS_TOKEN_URL, data=fields).json()
+    response = (await client.post(FB_ACCESS_TOKEN_URL, data=fields)).json()
     print("Auth response:")
     print(response)
 
@@ -135,17 +134,17 @@ async def serve_image():
     else:
         style = int(style)
 
-    # if ('user_id' not in session) or ('access_token' not in session):
-    #     return {
-    #         "error_type": "AuthRequired",
-    #         "error_message": "User is not authenticated"
-    #     }
-    # user_id = session['user_id']
-    # access_token = session['access_token']
-
-    user_id = "17841400819370683"
-    access_token = "IGQVJVdWtid3ZAtQnNEb2pxVkgyajNLQlVpZAFBNcFBvVzczNkRUWjFTSlFMY1QyeU9JbEtWWE5DOHpTSm1Cc3JLUmJGbFVlaGd2SjV4Q0txYjN2MVp6T3lpN3NLRkZAYQUpIMHBfTkhpeFhfRFIzdFpCUAZDZD"
-
+    if DEBUG_MODE:
+        user_id = os.environ.get('IG_USER_ID')
+        access_token = os.environ.get('IG_ACCESS_TOKEN')
+    else:
+        if ('user_id' not in session) or ('access_token' not in session):
+            return {
+                "error_type": "AuthRequired",
+                "error_message": "User is not authenticated"
+            }
+        user_id = session['user_id']
+        access_token = session['access_token']
 
     print("preparation time: --- %s seconds ---" % (time.time() - start_time))
 

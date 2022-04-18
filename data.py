@@ -1,5 +1,4 @@
 from sortedcontainers import SortedKeyList
-import requests as req
 import asyncio as aio
 import httpx
 import math
@@ -10,52 +9,28 @@ MAX_SIMULT_REQUESTS = 10
 FB_GRAPH_URL = "https://graph.instagram.com"
 
 
-def _fetch_user_name(user_id: str, access_token: str) -> dict:
-    fields = {
-        "fields": "id,username,media_count",
-        "access_token": access_token
-    }
-    try:
-        response = req.get(f"{FB_GRAPH_URL}/me", params=fields).json()
-    except req.exceptions.ConnectionError as err:
-        return {
-            "error": err
-        }
-    return response
+async def get_media_list(user_id: str, access_token: str, CANVAS_HEIGHT: int) -> [Media]:
+    client = httpx.AsyncClient()
 
-
-def _fetch_user_media(_user_id: str, access_token: str) -> dict:
     fields = {
         "fields": "id,caption,media_type,media_url,permalink,timestamp,username",
         "access_token": access_token
     }
-    try:
-        response = req.get(f"{FB_GRAPH_URL}/me/media", params=fields).json()
-    except req.exceptions.ConnectionError as err:
-        return {
-            "error": err
-        }
-    return response
+    response = (await client.get(f"{FB_GRAPH_URL}/me/media", params=fields)).json()
 
-
-async def get_media_list(user_id: str, access_token: str, CANVAS_HEIGHT: int) -> [Media]:
-    response = _fetch_user_media(user_id, access_token)
-    # print(response)
     if "error" in response:
         raise IOError('Received error while fetching user media:', response)
     if "data" not in response:
         return SortedKeyList([])
     data = response["data"]
 
-    client = httpx.AsyncClient()
     tasks = []
-
     sem = aio.Semaphore(MAX_SIMULT_REQUESTS)
     for media in data:
         tasks.append(aio.create_task(parse_media(sem, client, media, CANVAS_HEIGHT)))
 
     while response.get("paging").get("next") is not None:
-        response = req.get(response["paging"]["next"]).json()
+        response = (await client.get(response["paging"]["next"])).json()
         data = response.get("data")
         for media in data:
             tasks.append(aio.create_task(parse_media(sem, client, media, CANVAS_HEIGHT)))

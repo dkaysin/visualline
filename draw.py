@@ -4,8 +4,6 @@ from skimage.color import rgb2hsv, hsv2rgb
 from scipy import ndimage as ndi
 import numpy as np
 from sortedcontainers import SortedKeyList
-import math
-import time
 
 from Media import Media
 

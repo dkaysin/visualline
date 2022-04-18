@@ -5,39 +5,45 @@ from datetime import datetime
 import imageio.v3 as iio
 import asyncio as aio
 from more_itertools import chunked
+import os
 
 from PIL import Image
+
+DEBUG_MODE = os.environ.get('DEBUG_MODE') == "True"
 
 
 async def parse_media(sem, client, payload, CANVAS_HEIGHT):
     media = Media(payload)
-
     image = None
-    try:
-        image = iio.imread(f"./cached/{media.media_id}.jpg")
-        print("Fetched from disk: ", media.media_id)
-    except Exception as err:
-        print(err)
-        if media.media_type in ["IMAGE", "CAROUSEL_ALBUM"]:
-            url = payload.get('media_url')
-            tries = 0
-            async with sem:
-                while (image is None) and (tries <= 5):
-                    tries += 1
-                    # print(f"Fetching media {media.media_id} from {media.media_url}. Try: {tries}")
-                    try:
-                        response = await client.get(url)
-                        img_bytes = response.content
-                        image = iio.imread(img_bytes)
-                        # image = img_as_float(iio.imread(img_bytes))
-                        iio.imwrite(f"./cached/{media.media_id}.jpg", image, format_hint=".jpg")
-                    except Exception:  # TODO more specific exception must be used
-                        # await aio.sleep(0.1 * 2**tries)
-                        await aio.sleep(0.1)
+
+    if DEBUG_MODE:
+        try:
+            image = iio.imread(f"./cached/{media.media_id}.jpg")
+            # print("Fetched from disk: ", media.media_id)
+        except Exception:
+            pass
+
+    if image is None and media.media_type in ["IMAGE", "CAROUSEL_ALBUM"]:
+        url = payload.get('media_url')
+        tries = 0
+        async with sem:
+            while (image is None) and (tries <= 5):
+                tries += 1
+                # print(f"Fetching media {media.media_id} from {media.media_url}. Try: {tries}")
+                try:
+                    response = await client.get(url)
+                    img_bytes = response.content
+                    image = iio.imread(img_bytes)
+                    # image = img_as_float(iio.imread(img_bytes))
+                    iio.imwrite(f"./cached/{media.media_id}.jpg", image, format_hint=".jpg")
+                except Exception:  # TODO more specific exception must be used
+                    # await aio.sleep(0.1 * 2**tries)
+                    await aio.sleep(0.1)
+
     if image is not None:
         media.strip = generate_strip(image, CANVAS_HEIGHT)
         return media
-    print(f"Media {media.media_id} skipped: ", media.media_id)
+    # print(f"Media {media.media_id} skipped: ", media.media_id)
     return None
 
 
@@ -71,8 +77,8 @@ def generate_strip(image: np.array, CANVAS_HEIGHT: int) -> np.array:
     # strip_blur_radius = CANVAS_HEIGHT / 20
     # strip = ndi.gaussian_filter1d(strip, sigma=strip_blur_radius, axis=0)
 
-    thumbnail = ndi.zoom(image, (300/image.shape[0], 200/image.shape[0], 1), order=1)
-    strip = np.array([_get_dominant_color(np.array(chunk)) for chunk in chunked(thumbnail, 20)], dtype=np.uint8)
+    thumbnail = ndi.zoom(image, (50/image.shape[0], 100/image.shape[0], 1), order=1)
+    strip = np.array([_get_dominant_color(np.array(chunk)) for chunk in chunked(thumbnail, 5)], dtype=np.uint8)
     strip = ndi.gaussian_filter1d(strip, sigma=1, axis=0)
     strip = ndi.zoom(strip, (CANVAS_HEIGHT / strip.shape[0], 1), order=1)
     # strip = ndi.gaussian_filter1d(strip, sigma=CANVAS_HEIGHT / 20, axis=0)
@@ -86,10 +92,11 @@ def _saturation_key(rgb):
     mn, mx = min(rgb)/255., max(rgb)/255.
     lum = (mx+mn)/2
     if mx < 0.01 or mn > 0.99:
-        return 0
+        sat = 0.2
     else:
-        return (mx-mn) * 0.8 + 0.2
+        sat = mx - mn
         # return (mx - mn) / (1 - abs(2 * lum - 1)) * lum * 0.8 + 0.2
+    return sat * 0.8 + 0.2
 
 
 def _get_dominant_color(image):
@@ -98,10 +105,11 @@ def _get_dominant_color(image):
     palette = list(chunked(paletted.getpalette(), 3))
     # print("palette: ", palette)
 
-    mx_col = max(paletted.getcolors(), key=lambda pair: pair[0] * _saturation_key(palette[pair[1]]))
+    dominant_color = max(paletted.getcolors(), key=lambda pair: pair[0] * _saturation_key(palette[pair[1]]))
     # print("mx_col: ", mx_col)
 
-    return palette[mx_col[1]]
+    return palette[dominant_color[1]]
+    # return np.median(image, axis=(0,1))
 
 # if __name__ == '__main__':
 #     pass
