@@ -40,8 +40,8 @@ else:
 
 def get_db_conn():
     if 'db' not in g:
-        g.db = app.config['postgreSQL_pool'].getconn()
-    return g.db
+        g.db_conn = app.config['postgreSQL_pool'].getconn()
+    return g.db_conn
 
 
 @app.teardown_appcontext
@@ -177,7 +177,7 @@ async def serve_image():
     # db_conn = psycopg2.connect(f"dbname=visualline-db user={DB_USER} password={DB_PASSWORD}")
     db_conn = get_db_conn()
     media_list = SortedKeyList(
-        await get_media_list(db_conn, CANVAS_HEIGHT, user_id, access_token),
+        await get_media_list(CANVAS_HEIGHT, user_id, access_token),
         key=lambda m: m.strip_position
     )
     db_conn.commit()
