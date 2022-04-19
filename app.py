@@ -13,19 +13,21 @@ from data import get_media_list
 
 CANVAS_WIDTH = 800
 CANVAS_HEIGHT = 800
-DEBUG_MODE = os.environ.get('DEBUG_MODE') == "True"
+DEBUG_MODE = os.environ.get("DEBUG_MODE") == "True"
 
 app = Flask(__name__)
-app.secret_key = b'sf423ef24378y'  # TODO replace with dynamically generated key on a per-person basis
+app.secret_key = os.environ.get("APP_SECRET_KEY")
 
 APP_ID = "1113503899492527"
-FB_VISUALLINE_APP_SECRET = os.environ.get('FB_VISUALLINE_APP_SECRET')
+FB_VISUALLINE_APP_SECRET = os.environ.get("FB_VISUALLINE_APP_SECRET")
 APP_URL = "https://visualline.herokuapp.com"
 AUTH_REDIRECT_URL = APP_URL+"/auth/"
 FB_AUTH_URL = "https://api.instagram.com/oauth/authorize"
 FB_ACCESS_TOKEN_URL = "https://api.instagram.com/oauth/access_token"
 DB_USER = os.environ.get('DB_USER')
 DB_PASSWORD = os.environ.get('DB_PASSWORD')
+DATABASE_URL = os.environ['DATABASE_URL']
+
 
 import os
 import gc
@@ -83,7 +85,7 @@ async def auth():
             "error_message": "Please provide correct short-lived code for FB authentication"
         }
 
-    code = escape(code)
+    # code = escape(code)
     fields = {
         'client_id': APP_ID,
         'client_secret': FB_VISUALLINE_APP_SECRET,
@@ -129,33 +131,34 @@ def index():
 
 @app.route("/fetch/")
 async def serve_image():
-    start_time = time.time()
     style = request.args.get('style')
     if style is None:
         style = 0
     else:
         style = int(style)
 
+    start_time = time.time()
     if DEBUG_MODE:
-        user_id = os.environ.get('IG_USER_ID')
-        access_token = os.environ.get('IG_ACCESS_TOKEN')
+        user_id = os.environ.get('DEBUG_USER_ID')
+        access_token = os.environ.get('DEBUG_ACCESS_TOKEN')
     else:
-        if ('user_id' not in session) or ('access_token' not in session):
+        if 'user_id' not in session or 'access_token' not in session:
             return {
                 "error_type": "AuthRequired",
                 "error_message": "User is not authenticated"
             }
         user_id = session['user_id']
         access_token = session['access_token']
-
-    print("preparation time: --- %s seconds ---" % (time.time() - start_time))
+    print("authentication execution time: --- %s seconds ---" % (time.time() - start_time))
 
     start_time = time.time()
-    db_conn = psycopg2.connect(f"dbname=visualline-db user={DB_USER} password={DB_PASSWORD}")
+    # db_conn = psycopg2.connect(f"dbname=visualline-db user={DB_USER} password={DB_PASSWORD}")
+    db_conn = psycopg2.connect(DATABASE_URL, sslmode='require')
     media_list = SortedKeyList(
         await get_media_list(db_conn, CANVAS_HEIGHT, user_id, access_token),
         key=lambda m: m.strip_position
     )
+    db_conn.commit()
     print("<get_media_list> execution time: --- %s seconds ---" % (time.time() - start_time))
 
     start_time = time.time()

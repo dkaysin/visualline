@@ -14,14 +14,12 @@ THUMB_WIDTH = 100
 THUMB_HEIGHT = 50
 
 
-async def parse_media(db_conn, sem, client, CANVAS_HEIGHT: int, payload):
-    db_cur = db_conn.cursor()
-
+async def parse_media(db_cur, sem, client, CANVAS_HEIGHT: int, payload):
     media = Media(payload)
     image = None
 
     db_cur.execute("""SELECT (media_strip_thumb) FROM media 
-        WHERE MEDIA_ID=%s;
+        WHERE media_id=%s;
     """, [media.media_id])
     strip_cached = db_cur.fetchone()
     if strip_cached is not None:
@@ -53,7 +51,6 @@ async def parse_media(db_conn, sem, client, CANVAS_HEIGHT: int, payload):
                         ON CONFLICT (media_id) DO UPDATE SET media_strip_thumb = %s;
                    """, [media.media_id, psycopg2.Binary(output.getvalue()), psycopg2.Binary(output.getvalue())])
 
-    db_cur.close()
     if media.strip_thumb is None:
         return None
     else:

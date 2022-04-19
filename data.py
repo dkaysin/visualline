@@ -25,24 +25,24 @@ async def get_media_list(db_conn, CANVAS_HEIGHT: int, user_id: str, access_token
         return SortedKeyList([])
     data = response["data"]
 
+    db_cur = db_conn.cursor()
     tasks = []
     sem = aio.Semaphore(MAX_SIMULT_REQUESTS)
     for media in data:
-        tasks.append(aio.create_task(parse_media(db_conn, sem, client, CANVAS_HEIGHT, media)))
-
+        tasks.append(aio.create_task(parse_media(db_cur, sem, client, CANVAS_HEIGHT, media)))
     while response.get("paging").get("next") is not None:
         response = (await client.get(response["paging"]["next"])).json()
         data = response.get("data")
         for media in data:
-            tasks.append(aio.create_task(parse_media(db_conn, sem, client, CANVAS_HEIGHT, media)))
+            tasks.append(aio.create_task(parse_media(db_cur, sem, client, CANVAS_HEIGHT, media)))
 
     res = await aio.gather(*tasks)
+    db_cur.close()
     await client.aclose()
     res = [m for m in res if m is not None]
     res = sorted(res, key=lambda m: m.strip_position)
     res = _generate_strip_positions(res)
     print("Collected media: ", len(res))
-    db_conn.commit()
     return res
 
 
