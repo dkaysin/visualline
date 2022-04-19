@@ -1,4 +1,4 @@
-from flask import Flask, send_file, request, session, redirect, url_for
+from flask import Flask, send_file, request, session, redirect, url_for, g
 import imageio.v3 as iio
 import io
 import os
@@ -7,6 +7,7 @@ from sortedcontainers import SortedKeyList
 import time
 import httpx
 import psycopg2
+from psycopg2 import pool
 
 from draw import draw, save_on_disk
 from data import get_media_list
@@ -27,6 +28,21 @@ FB_ACCESS_TOKEN_URL = "https://api.instagram.com/oauth/access_token"
 DB_USER = os.environ.get('DB_USER')
 DB_PASSWORD = os.environ.get('DB_PASSWORD')
 DATABASE_URL = os.environ['DATABASE_URL']
+
+app.config['postgreSQL_pool'] = pool.SimpleConnectionPool(1, 20, DATABASE_URL, sslmode='require')
+
+
+def get_db_conn():
+    if 'db' not in g:
+        g.db = app.config['postgreSQL_pool'].getconn()
+    return g.db
+
+
+@app.teardown_appcontext
+def close_conn(e):
+    db = g.pop('db', None)
+    if db is not None:
+        app.config['postgreSQL_pool'].putconn(db)
 
 
 import os
@@ -153,7 +169,7 @@ async def serve_image():
 
     start_time = time.time()
     # db_conn = psycopg2.connect(f"dbname=visualline-db user={DB_USER} password={DB_PASSWORD}")
-    db_conn = psycopg2.connect(DATABASE_URL, sslmode='require')
+    db_conn = get_db_conn()
     media_list = SortedKeyList(
         await get_media_list(db_conn, CANVAS_HEIGHT, user_id, access_token),
         key=lambda m: m.strip_position

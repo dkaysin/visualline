@@ -24,7 +24,6 @@ async def get_media_list(db_conn, CANVAS_HEIGHT: int, user_id: str, access_token
     if "data" not in response:
         return SortedKeyList([])
     data = response["data"]
-
     db_cur = db_conn.cursor()
     tasks = []
     sem = aio.Semaphore(MAX_SIMULT_REQUESTS)
