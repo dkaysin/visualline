@@ -27,9 +27,15 @@ FB_AUTH_URL = "https://api.instagram.com/oauth/authorize"
 FB_ACCESS_TOKEN_URL = "https://api.instagram.com/oauth/access_token"
 DB_USER = os.environ.get('DB_USER')
 DB_PASSWORD = os.environ.get('DB_PASSWORD')
-DATABASE_URL = os.environ['DATABASE_URL']
+DATABASE_URL = os.environ.get('DATABASE_URL')
 
-app.config['postgreSQL_pool'] = pool.SimpleConnectionPool(1, 20, DATABASE_URL, sslmode='require')
+if DEBUG_MODE:
+    app.config['postgreSQL_pool'] = pool.SimpleConnectionPool(1, 20,
+                                                              dbname='visualline-db',
+                                                              user=DB_USER,
+                                                              password=DB_PASSWORD)
+else:
+    app.config['postgreSQL_pool'] = pool.SimpleConnectionPool(1, 20, DATABASE_URL, sslmode='require')
 
 
 def get_db_conn():
