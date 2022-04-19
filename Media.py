@@ -1,12 +1,12 @@
 import numpy as np
 from datetime import datetime
-import imageio.v3 as iio
 import asyncio as aio
 from more_itertools import chunked
 import io
 import os
-
+import time
 from PIL import Image, ImageFilter
+import psycopg2
 
 DEBUG_MODE = os.environ.get('DEBUG_MODE') == "True"
 
@@ -14,40 +14,51 @@ THUMB_WIDTH = 100
 THUMB_HEIGHT = 50
 
 
-async def parse_media(sem, client, payload, CANVAS_HEIGHT):
+async def parse_media(db_conn, sem, client, CANVAS_HEIGHT: int, payload):
+    db_cur = db_conn.cursor()
+
     media = Media(payload)
     image = None
 
-    if DEBUG_MODE:
-        try:
-            image = Image.open(f"./cached/{media.media_id}.jpg").resize((THUMB_WIDTH, THUMB_HEIGHT), resample=Image.NEAREST)
-            # print("Fetched from disk: ", media.media_id)
-        except Exception:
-            pass
+    db_cur.execute("""SELECT (media_strip_thumb) FROM media 
+        WHERE MEDIA_ID=%s;
+    """, [media.media_id])
+    strip_cached = db_cur.fetchone()
+    if strip_cached is not None:
+        media.strip_thumb = Image.open(io.BytesIO(strip_cached[0]))
 
-    if image is None and media.media_type in ["IMAGE", "CAROUSEL_ALBUM"]:
-        url = payload.get('media_url')
-        tries = 0
-        async with sem:
-            while (image is None) and (tries <= 5):
-                tries += 1
-                # print(f"Fetching media {media.media_id} from {media.media_url}. Try: {tries}")
-                try:
-                    response = await client.get(url)
-                    img_bytes = io.BytesIO(response.content)
-                    image = Image.open(img_bytes).resize((THUMB_WIDTH, THUMB_HEIGHT), resample=Image.NEAREST)
-                    if DEBUG_MODE:
-                        iio.imwrite(f"./cached/{media.media_id}.jpg", image, format_hint=".jpg")
-                except Exception as err:  # TODO more specific exception must be used
-                    print(err)
-                    # await aio.sleep(0.1 * 2**tries)
-                    await aio.sleep(0.1)
+    if media.strip_thumb is None:
+        if media.media_type in ["IMAGE", "CAROUSEL_ALBUM"]:
+            url = payload.get('media_url')
+            tries = 0
+            async with sem:
+                while (image is None) and (tries <= 5):
+                    tries += 1
+                    # print(f"Fetching media {media.media_id} from {media.media_url}. Try: {tries}")
+                    try:
+                        response = await client.get(url)
+                        img_bytes = io.BytesIO(response.content)
+                        image = Image.open(img_bytes).resize((THUMB_WIDTH, THUMB_HEIGHT), resample=Image.NEAREST)
+                    except Exception as err:  # TODO more specific exception must be used
+                        print(err)
+                        # await aio.sleep(0.1 * 2**tries)
+                        await aio.sleep(0.1)
 
-    if image is not None:
-        media.strip = generate_strip(image, CANVAS_HEIGHT)
+            if image is not None:
+                media.strip_thumb = generate_strip_thumb(image)
+                with io.BytesIO() as output:
+                    media.strip_thumb.save(output, format="JPEG")
+                    db_cur.execute("""INSERT INTO media (media_id, media_strip_thumb)
+                        VALUES (%s, %s)
+                        ON CONFLICT (media_id) DO UPDATE SET media_strip_thumb = %s;
+                   """, [media.media_id, psycopg2.Binary(output.getvalue()), psycopg2.Binary(output.getvalue())])
+
+    db_cur.close()
+    if media.strip_thumb is None:
+        return None
+    else:
+        media.strip = generate_strip(media.strip_thumb, CANVAS_HEIGHT)
         return media
-    # print(f"Media {media.media_id} skipped: ", media.media_id)
-    return None
 
 
 class Media:
@@ -62,13 +73,19 @@ class Media:
         self.timestamp = dt.timestamp()
         self.strip_position = self.timestamp
         self.media_url = payload.get('media_url')
+        self.strip_thumb = None
         self.strip = None
 
     def __str__(self):
         return f"id: {self.media_id}, Timestamp: {self.timestamp}, strip_position: {self.strip_position}, strip: {self.strip}"
 
 
-def generate_strip(image: Image.Image, CANVAS_HEIGHT: int) -> np.array:
+def generate_strip(stripe: Image.Image, CANVAS_HEIGHT: int) -> np.array:
+    res = stripe.resize((CANVAS_HEIGHT, 1), resample=Image.BILINEAR)
+    return np.array(res)[0]/255
+
+
+def generate_strip_thumb(image: Image.Image) -> Image.Image:
     if image is None:
         raise ValueError("Image provided to generate_strip is None")
 
@@ -89,9 +106,7 @@ def generate_strip(image: Image.Image, CANVAS_HEIGHT: int) -> np.array:
         strip = image.crop((0, n, thumb_height, n+stride))
         arr.append(_get_dominant_color(strip))
 
-    stripe = Image.fromarray(np.array([arr], dtype=np.uint8), mode="RGB")
-    blurred_stripe = stripe.filter(ImageFilter.BoxBlur(1))
-    res = blurred_stripe.resize((CANVAS_HEIGHT, 1), resample=Image.BILINEAR)
+    strip = Image.fromarray(np.array([arr], dtype=np.uint8), mode="RGB").filter(ImageFilter.BoxBlur(1))
 
     # strip = np.array([_get_dominant_color(np.array(chunk)) for chunk in chunked(image, 5)], dtype=np.uint8)
     # strip = ndi.gaussian_filter1d(strip, sigma=1, axis=0)
@@ -99,7 +114,7 @@ def generate_strip(image: Image.Image, CANVAS_HEIGHT: int) -> np.array:
     # # strip = ndi.gaussian_filter1d(strip, sigma=CANVAS_HEIGHT / 20, axis=0)
     # strip = strip / 255.
 
-    return np.array(res)[0]/255
+    return strip
 
 
 def _saturation_key(rgb):
@@ -115,9 +130,11 @@ def _saturation_key(rgb):
 
 
 def _get_dominant_color(image: Image.Image):
+    # start_time = time.time()
     paletted = image.convert('P', palette=Image.ADAPTIVE, colors=8)
     palette = list(chunked(paletted.getpalette(), 3))
     dominant_color = max(paletted.getcolors(), key=lambda pair: pair[0] * _saturation_key(palette[pair[1]]))
+    # print("_get_dominant_color time: --- %s seconds ---" % (time.time() - start_time))
     return palette[dominant_color[1]]
 
 

@@ -8,4 +8,4 @@ scikit-image==0.19.2
 imageio==2.16.2
 Pillow-SIMD==9.0.0.post1
 httpx==0.22.0
-
+psycopg2==2.9.3

@@ -6,6 +6,7 @@ from markupsafe import escape
 from sortedcontainers import SortedKeyList
 import time
 import httpx
+import psycopg2
 
 from draw import draw, save_on_disk
 from data import get_media_list
@@ -23,10 +24,11 @@ APP_URL = "https://visualline.herokuapp.com"
 AUTH_REDIRECT_URL = APP_URL+"/auth/"
 FB_AUTH_URL = "https://api.instagram.com/oauth/authorize"
 FB_ACCESS_TOKEN_URL = "https://api.instagram.com/oauth/access_token"
+DB_USER = os.environ.get('DB_USER')
+DB_PASSWORD = os.environ.get('DB_PASSWORD')
 
-
-import gc
 import os
+import gc
 import tracemalloc
 import psutil
 process = psutil.Process(os.getpid())
@@ -149,8 +151,9 @@ async def serve_image():
     print("preparation time: --- %s seconds ---" % (time.time() - start_time))
 
     start_time = time.time()
+    db_conn = psycopg2.connect(f"dbname=visualline-db user={DB_USER} password={DB_PASSWORD}")
     media_list = SortedKeyList(
-        await get_media_list(user_id, access_token, CANVAS_HEIGHT),
+        await get_media_list(db_conn, CANVAS_HEIGHT, user_id, access_token),
         key=lambda m: m.strip_position
     )
     print("<get_media_list> execution time: --- %s seconds ---" % (time.time() - start_time))
@@ -163,6 +166,7 @@ async def serve_image():
     output = io.BytesIO()
     iio.imwrite(output, canvas, format_hint=".jpg")
     output.seek(0)
+    db_conn.close()
     gc.collect()
     print("image delivery execution time: --- %s seconds ---" % (time.time() - start_time))
     return send_file(output, mimetype='image/jpg')
