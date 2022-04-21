@@ -1,4 +1,4 @@
-from flask import Flask, send_file, request, session, redirect, url_for, g
+from flask import Flask, send_file, request, session, redirect, url_for, g, jsonify
 import imageio.v3 as iio
 import io
 import os
@@ -8,6 +8,7 @@ import time
 import httpx
 import psycopg2
 from psycopg2 import pool
+import asyncio as aio
 
 from draw import draw, save_on_disk
 from data import get_media_list
@@ -17,6 +18,7 @@ CANVAS_HEIGHT = 800
 DEBUG_MODE = os.environ.get("DEBUG_MODE") == "True"
 
 app = Flask(__name__)
+
 app.secret_key = os.environ.get("APP_SECRET_KEY")
 
 APP_ID = "1113503899492527"
@@ -28,6 +30,9 @@ FB_ACCESS_TOKEN_URL = "https://api.instagram.com/oauth/access_token"
 DB_USER = os.environ.get('DB_USER')
 DB_PASSWORD = os.environ.get('DB_PASSWORD')
 DATABASE_URL = os.environ.get('DATABASE_URL')
+
+
+# app.config["static_url_path"] = "/frontend/visualline/build"
 
 if DEBUG_MODE:
     app.config['postgreSQL_pool'] = pool.SimpleConnectionPool(1, 20,
@@ -141,14 +146,28 @@ def de_auth():
 
 @app.route("/")
 def index():
-    return f"""
-        <html>
-            <a href="{APP_URL}/fetch/">/fetch/</a> <br/>
-            <a href="{APP_URL}/login/">/login/</a> <br/>
-            <a href="{APP_URL}/auth/">/auth/</a> <br/>
-            <a href="{APP_URL}/de_auth/">/de-auth/</a> 
-        </html>
-        """
+    return app.send_static_file("index.html")
+
+
+    # return f"""
+    #     <html>
+    #         <a href="{APP_URL}/fetch/">/fetch/</a> <br/>
+    #         <a href="{APP_URL}/login/">/login/</a> <br/>
+    #         <a href="{APP_URL}/auth/">/auth/</a> <br/>
+    #         <a href="{APP_URL}/de_auth/">/de-auth/</a>
+    #     </html>
+    #     """
+
+
+@app.route("/is_logged_in/")
+async def is_logged_in():
+    await aio.sleep(2)
+    if 'user_id' in session and 'access_token' in session:
+        response = jsonify({"isLoggedIn": True})
+    else:
+        response = jsonify({"isLoggedIn": False})
+    response.headers.add("Access-Control-Allow-Origin", "http://localhost:3000")
+    return response
 
 
 @app.route("/fetch/")
