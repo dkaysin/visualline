@@ -161,12 +161,10 @@ def index():
 
 @app.route("/is_logged_in/")
 async def is_logged_in():
-    await aio.sleep(2)
-    if 'user_id' in session and 'access_token' in session:
-        response = jsonify({"isLoggedIn": True})
-    else:
-        response = jsonify({"isLoggedIn": False})
-    response.headers.add("Access-Control-Allow-Origin", "http://localhost:3000")
+    await aio.sleep(1)
+    # response = jsonify({"isLoggedIn": ('user_id' in session and 'access_token' in session)})
+    response = jsonify({"isLoggedIn": True})
+    response.headers.add("Access-Control-Allow-Origin", "*")
     return response
 
 
@@ -213,7 +211,9 @@ async def serve_image():
     db_conn.close()
     gc.collect()
     print("image delivery execution time: --- %s seconds ---" % (time.time() - start_time))
-    return send_file(output, mimetype='image/jpg')
+    response = send_file(output, mimetype='image/jpg')
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    return response
 
 
 if __name__ == '__main__':
