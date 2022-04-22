@@ -22,7 +22,7 @@ async def get_media_list(CANVAS_HEIGHT: int, user_id: str, access_token: str) ->
     if "error" in response:
         raise IOError('Received error while fetching user media:', response)
     if "data" not in response:
-        return SortedKeyList([])
+        raise IOError('No data is provided.', response)
     data = response["data"]
     db_cur = g.db_conn.cursor()
     tasks = []

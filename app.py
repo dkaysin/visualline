@@ -91,15 +91,15 @@ def snap():
         """
 
 
-# TODO move to frontend
-@app.route("/login/")
-def request_login():
-    href = f"{FB_AUTH_URL}" + \
-        f"?client_id={APP_ID}" + \
-        f"&redirect_uri={AUTH_REDIRECT_URL}" + \
-        f"&scope=user_profile,user_media" + \
-        f"&response_type=code"
-    return f"<html> <a href={href}> Click to login </a> </html>"
+# # TODO move to frontend
+# @app.route("/login/")
+# def request_login():
+#     href = f"{FB_AUTH_URL}" + \
+#         f"?client_id={APP_ID}" + \
+#         f"&redirect_uri={AUTH_REDIRECT_URL}" + \
+#         f"&scope=user_profile,user_media" + \
+#         f"&response_type=code"
+#     return f"<html> <a href={href}> Click to login </a> </html>"
 
 
 @app.route("/auth/")
@@ -107,10 +107,12 @@ async def auth():
     client = httpx.AsyncClient()
     code = request.args.get('code')
     if code is None:
-        return {
-            "error_type": "AuthException",
-            "error_message": "Please provide correct short-lived code for FB authentication"
-        }
+        return jsonify({
+            "error": {
+                "type": "AuthException",
+                "message": "Please provide correct short-lived code for FB authentication"
+            }
+        })
 
     # code = escape(code)
     fields = {
@@ -125,11 +127,13 @@ async def auth():
     print(response)
 
     if ('user_id' not in response) or ('access_token' not in response):
-        return {
-            "error_type": "FBAuthException",
-            "error_message": "Authentication with FB failed",
-            "data": response
-        }
+        return jsonify({
+            "error": {
+                "type": "FBAuthException",
+                "message": "Authentication with FB failed",
+                "payload": response,
+            }
+        })
 
     # Save user's credentials in session storage
     session['user_id'] = response['user_id']
@@ -160,6 +164,7 @@ def index():
 
 FB_GRAPH_URL = "https://graph.instagram.com"
 
+
 @app.route("/is_logged_in/")
 async def is_logged_in():
     await aio.sleep(1)
@@ -175,7 +180,6 @@ async def is_logged_in():
 
     response = jsonify({"isLoggedIn": credentials_found})
     # response = jsonify({"isLoggedIn": True})
-    response.headers.add("Access-Control-Allow-Origin", "*")
     return response
 
 
@@ -193,10 +197,12 @@ async def serve_image():
         access_token = os.environ.get('DEBUG_ACCESS_TOKEN')
     else:
         if 'user_id' not in session or 'access_token' not in session:
-            return {
-                "error_type": "AuthRequired",
-                "error_message": "User is not authenticated"
-            }
+            return jsonify({
+                "error": {
+                    "type": "AuthError",
+                    "message": "No credentials found in user's session",
+                },
+            })
         user_id = session['user_id']
         access_token = session['access_token']
     print("authentication execution time: --- %s seconds ---" % (time.time() - start_time))
@@ -204,26 +210,32 @@ async def serve_image():
     start_time = time.time()
     # db_conn = psycopg2.connect(f"dbname=visualline-db user={DB_USER} password={DB_PASSWORD}")
     db_conn = get_db_conn()
-    media_list = SortedKeyList(
-        await get_media_list(CANVAS_HEIGHT, user_id, access_token),
-        key=lambda m: m.strip_position
-    )
-    db_conn.commit()
-    print("<get_media_list> execution time: --- %s seconds ---" % (time.time() - start_time))
+    try:
+        media_list = SortedKeyList(
+            await get_media_list(CANVAS_HEIGHT, user_id, access_token),
+            key=lambda m: m.strip_position
+        )
+        db_conn.commit()
+        print("<get_media_list> execution time: --- %s seconds ---" % (time.time() - start_time))
+        start_time = time.time()
+        canvas = draw(media_list, CANVAS_WIDTH, CANVAS_HEIGHT, style)
+        print("<draw> execution time: --- %s seconds ---" % (time.time() - start_time))
 
-    start_time = time.time()
-    canvas = draw(media_list, CANVAS_WIDTH, CANVAS_HEIGHT, style)
-    print("<draw> execution time: --- %s seconds ---" % (time.time() - start_time))
-
-    start_time = time.time()
-    output = io.BytesIO()
-    iio.imwrite(output, canvas, format_hint=".jpg")
-    output.seek(0)
-    db_conn.close()
-    gc.collect()
-    print("image delivery execution time: --- %s seconds ---" % (time.time() - start_time))
-    response = send_file(output, mimetype='image/jpg')
-    response.headers.add("Access-Control-Allow-Origin", "*")
+        start_time = time.time()
+        output = io.BytesIO()
+        iio.imwrite(output, canvas, format_hint=".jpg")
+        output.seek(0)
+        db_conn.close()
+        gc.collect()
+        print("image delivery execution time: --- %s seconds ---" % (time.time() - start_time))
+        response = send_file(output, mimetype='image/jpg')
+    except:
+        response = jsonify({
+            "error": {
+                "type": "FetchMediaError",
+                "message": "Error while fetching media",
+            },
+        })
     return response
 
 
