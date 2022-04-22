@@ -162,8 +162,8 @@ def index():
 @app.route("/is_logged_in/")
 async def is_logged_in():
     await aio.sleep(1)
-    # response = jsonify({"isLoggedIn": ('user_id' in session and 'access_token' in session)})
-    response = jsonify({"isLoggedIn": True})
+    response = jsonify({"isLoggedIn": ('user_id' in session and 'access_token' in session)})
+    # response = jsonify({"isLoggedIn": True})
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response
 
