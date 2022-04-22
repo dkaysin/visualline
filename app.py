@@ -184,7 +184,7 @@ async def is_logged_in():
             credentials_found = False
 
     response = jsonify({"isLoggedIn": credentials_found})
-    response = jsonify({"isLoggedIn": True})
+    # response = jsonify({"isLoggedIn": True})
     return response
 
 
