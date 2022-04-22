@@ -44,16 +44,16 @@ else:
 
 
 def get_db_conn():
-    if 'db' not in g:
+    if 'db_conn' not in g:
         g.db_conn = app.config['postgreSQL_pool'].getconn()
     return g.db_conn
 
 
 @app.teardown_appcontext
 def close_conn(e):
-    db = g.pop('db', None)
-    if db is not None:
-        app.config['postgreSQL_pool'].putconn(db)
+    db_conn = g.pop('db_conn', None)
+    if db_conn is not None:
+        app.config['postgreSQL_pool'].putconn(db_conn)
 
 
 import os
