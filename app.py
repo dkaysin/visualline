@@ -158,11 +158,22 @@ def index():
     #     </html>
     #     """
 
+FB_GRAPH_URL = "https://graph.instagram.com"
 
 @app.route("/is_logged_in/")
 async def is_logged_in():
     await aio.sleep(1)
-    response = jsonify({"isLoggedIn": ('user_id' in session and 'access_token' in session)})
+    credentials_found = 'user_id' in session and 'access_token' in session
+    if credentials_found:
+        fields = {
+            "fields": "id",
+            "access_token": session["access_token"]
+        }
+        test_fetch = (await httpx.AsyncClient().get(f"{FB_GRAPH_URL}/me/media", params=fields)).json()
+        if "error" in test_fetch or "data" not in test_fetch:
+            credentials_found = False
+
+    response = jsonify({"isLoggedIn": credentials_found})
     # response = jsonify({"isLoggedIn": True})
     response.headers.add("Access-Control-Allow-Origin", "*")
     return response
