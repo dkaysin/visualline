@@ -165,12 +165,12 @@ def index():
 FB_GRAPH_URL = "https://graph.instagram.com"
 
 
-@app.route("/result")
+@app.route("/result/")
 def redirect_to_index():
     return redirect(url_for('index'))
 
 
-@app.route("/is_logged_in")
+@app.route("/is_logged_in/")
 async def is_logged_in():
     await aio.sleep(1)
     credentials_found = 'user_id' in session and 'access_token' in session
