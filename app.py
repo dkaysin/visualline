@@ -165,14 +165,14 @@ def index():
 FB_GRAPH_URL = "https://graph.instagram.com"
 
 
-@app.route("/result/")
-def redirect_to_index():
-    return redirect(url_for('index'))
+# @app.route("/result/")
+# def redirect_to_index():
+#     return redirect(url_for('index'))
 
 
 @app.route("/is_logged_in/")
 async def is_logged_in():
-    await aio.sleep(1)
+    # await aio.sleep(1)
     credentials_found = 'user_id' in session and 'access_token' in session
     if credentials_found:
         fields = {
@@ -184,7 +184,7 @@ async def is_logged_in():
             credentials_found = False
 
     response = jsonify({"isLoggedIn": credentials_found})
-    # response = jsonify({"isLoggedIn": True})
+    response = jsonify({"isLoggedIn": True})
     return response
 
 
