@@ -30,7 +30,7 @@ FB_ACCESS_TOKEN_URL = "https://api.instagram.com/oauth/access_token"
 DB_USER = os.environ.get('DB_USER')
 DB_PASSWORD = os.environ.get('DB_PASSWORD')
 DATABASE_URL = os.environ.get('DATABASE_URL')
-
+FB_GRAPH_URL = "https://graph.instagram.com"
 
 # app.config["static_url_path"] = "/frontend/visualline/build"
 
@@ -162,13 +162,11 @@ def index():
     #     </html>
     #     """
 
-FB_GRAPH_URL = "https://graph.instagram.com"
-
 
 @app.route("/result/")
 def redirect_to_index():
-    # return redirect(url_for('index'))
-    return app.send_static_file("index.html")
+    return redirect(url_for('index'))
+    # return app.send_static_file("index.html")
 
 @app.route("/is_logged_in/")
 async def is_logged_in():
