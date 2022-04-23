@@ -165,9 +165,9 @@ def index():
 FB_GRAPH_URL = "https://graph.instagram.com"
 
 
-# @app.route("/result/")
-# def redirect_to_index():
-#     return redirect(url_for('index'))
+@app.route("/result/")
+def redirect_to_index():
+    return redirect(url_for('index'))
 
 
 @app.route("/is_logged_in/")
