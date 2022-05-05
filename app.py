@@ -181,8 +181,8 @@ async def is_logged_in():
         if "error" in test_fetch or "data" not in test_fetch:
             credentials_found = False
 
-    # response = jsonify({"isLoggedIn": credentials_found})
-    response = jsonify({"isLoggedIn": True})
+    response = jsonify({"isLoggedIn": credentials_found})
+    # response = jsonify({"isLoggedIn": True})
     return response
 
 
