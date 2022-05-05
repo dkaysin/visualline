@@ -3,6 +3,7 @@ from skimage.util import img_as_ubyte
 from skimage.color import rgb2hsv, hsv2rgb
 import numpy as np
 from sortedcontainers import SortedKeyList
+from PIL import Image
 
 from Media import Media
 
@@ -94,8 +95,20 @@ def draw(media_list: SortedKeyList[Media], canvas_width: int, canvas_height: int
     canvas = _post_process(canvas)
     # swap rows and columns
     canvas = np.transpose(canvas, (1, 0, 2))
+    # Add watermark
+    canvas = _add_watermark(canvas)
     # Convert from float[-1.,1.] to uint8[0,255]
     canvas = img_as_ubyte(canvas)
+    return canvas
+
+
+def _add_watermark(canvas: np.array) -> np.array:
+    canvas_h, canvas_w, _ = canvas.shape
+    watermark = np.array(Image.open("watermark.png")) / 255
+    wm_h, wm_w, _ = watermark.shape
+    alpha = watermark[:, :, 3]
+    for d in range(0, 3):
+        canvas[-wm_h:, -wm_w:, d] = watermark[:, :, d] * alpha + canvas[-wm_h:, -wm_w:, d] * (1-alpha)
     return canvas
 
 

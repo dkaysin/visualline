@@ -181,8 +181,8 @@ async def is_logged_in():
         if "error" in test_fetch or "data" not in test_fetch:
             credentials_found = False
 
-    response = jsonify({"isLoggedIn": credentials_found})
-    # response = jsonify({"isLoggedIn": True})
+    # response = jsonify({"isLoggedIn": credentials_found})
+    response = jsonify({"isLoggedIn": True})
     return response
 
 
@@ -213,32 +213,32 @@ async def serve_image():
     start_time = time.time()
     # db_conn = psycopg2.connect(f"dbname=visualline-db user={DB_USER} password={DB_PASSWORD}")
     db_conn = get_db_conn()
-    try:
-        media_list = SortedKeyList(
-            await get_media_list(CANVAS_HEIGHT, user_id, access_token),
-            key=lambda m: m.strip_position
-        )
-        db_conn.commit()
-        print("<get_media_list> execution time: --- %s seconds ---" % (time.time() - start_time))
-        start_time = time.time()
-        canvas = draw(media_list, CANVAS_WIDTH, CANVAS_HEIGHT, style)
-        print("<draw> execution time: --- %s seconds ---" % (time.time() - start_time))
+    # try:
+    media_list = SortedKeyList(
+        await get_media_list(CANVAS_HEIGHT, user_id, access_token),
+        key=lambda m: m.strip_position
+    )
+    db_conn.commit()
+    print("<get_media_list> execution time: --- %s seconds ---" % (time.time() - start_time))
+    start_time = time.time()
+    canvas = draw(media_list, CANVAS_WIDTH, CANVAS_HEIGHT, style)
+    print("<draw> execution time: --- %s seconds ---" % (time.time() - start_time))
 
-        start_time = time.time()
-        output = io.BytesIO()
-        iio.imwrite(output, canvas, format_hint=".jpg")
-        output.seek(0)
-        db_conn.close()
-        gc.collect()
-        print("image delivery execution time: --- %s seconds ---" % (time.time() - start_time))
-        response = send_file(output, mimetype='image/jpg')
-    except:
-        response = jsonify({
-            "error": {
-                "type": "FetchMediaError",
-                "message": "Error while fetching media",
-            },
-        })
+    start_time = time.time()
+    output = io.BytesIO()
+    iio.imwrite(output, canvas, format_hint=".jpg")
+    output.seek(0)
+    db_conn.close()
+    gc.collect()
+    print("image delivery execution time: --- %s seconds ---" % (time.time() - start_time))
+    response = send_file(output, mimetype='image/jpg')
+    # except Exception as err:
+    #     response = jsonify({
+    #         "error": {
+    #             "type": "FetchMediaError",
+    #             "message": "Error while fetching media",
+    #         },
+    #     })
     return response
 
 
