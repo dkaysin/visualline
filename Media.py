@@ -44,12 +44,13 @@ async def parse_media(db_cur, sem, client, CANVAS_HEIGHT: int, payload):
 
             if image is not None:
                 media.strip_thumb = generate_strip_thumb(image)
-                with io.BytesIO() as output:
-                    media.strip_thumb.save(output, format="JPEG")
-                    db_cur.execute("""INSERT INTO media (media_id, media_strip_thumb)
-                        VALUES (%s, %s)
-                        ON CONFLICT (media_id) DO UPDATE SET media_strip_thumb = %s;
-                   """, [media.media_id, psycopg2.Binary(output.getvalue()), psycopg2.Binary(output.getvalue())])
+                if media.strip_thumb is not None:
+                    with io.BytesIO() as output:
+                        media.strip_thumb.save(output, format="JPEG")
+                        db_cur.execute("""INSERT INTO media (media_id, media_strip_thumb)
+                            VALUES (%s, %s)
+                            ON CONFLICT (media_id) DO UPDATE SET media_strip_thumb = %s;
+                       """, [media.media_id, psycopg2.Binary(output.getvalue()), psycopg2.Binary(output.getvalue())])
 
     if media.strip_thumb is None:
         return None
