@@ -50,7 +50,7 @@ async def parse_media(db_cur, sem, client, CANVAS_HEIGHT: int, payload):
                         db_cur.execute("""INSERT INTO media (media_id, media_strip_thumb)
                             VALUES (%s, %s)
                             ON CONFLICT (media_id) DO UPDATE SET media_strip_thumb = %s;
-                       """, [media.media_id, psycopg2.Binary(output.getvalue()), psycopg2.Binary(output.getvalue())])
+                            """, [media.media_id, psycopg2.Binary(output.getvalue()), psycopg2.Binary(output.getvalue())])
 
     if media.strip_thumb is None:
         return None
