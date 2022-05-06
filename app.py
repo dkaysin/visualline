@@ -179,7 +179,7 @@ async def is_logged_in():
     credentials_found = 'user_id' in session and 'access_token' in session
     if credentials_found:
         fields = {
-            "fields": "id",
+            "fields": "id,username",
             "access_token": session["access_token"]
         }
         test_fetch = (await httpx.AsyncClient().get(f"{FB_GRAPH_URL}/me", params=fields)).json()
