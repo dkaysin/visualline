@@ -72,6 +72,7 @@ def draw(media_list: SortedKeyList[Media], canvas_width: int, canvas_height: int
     # draw gradient
     canvas = np.full((canvas_width, canvas_height, 3), 0, dtype=float)
     _insert_gradient(canvas, media_list, style)
+    canvas = filters.gaussian(canvas, 3, channel_axis=2, mode="nearest")
     layer = np.full((canvas_width, canvas_height, 3), 0, dtype=float)
     # if style == 1:
     #     _insert_strips(layer, media_list)

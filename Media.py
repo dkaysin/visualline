@@ -101,9 +101,9 @@ def generate_strip_thumb(image: Image.Image) -> Image.Image:
     arr = []
     for n in range(0, thumb_width, stride):
         strip = image.crop((0, n, thumb_height, n+stride))
-        arr.append(_get_dominant_color(strip))
-
-    strip = Image.fromarray(np.array([arr], dtype=np.uint8), mode="RGB").filter(ImageFilter.BoxBlur(1))
+        dom_color = _get_dominant_color(strip)
+        if dom_color is not None:
+            arr.append(dom_color)
 
     # strip = np.array([_get_dominant_color(np.array(chunk)) for chunk in chunked(image, 5)], dtype=np.uint8)
     # strip = ndi.gaussian_filter1d(strip, sigma=1, axis=0)
@@ -111,7 +111,10 @@ def generate_strip_thumb(image: Image.Image) -> Image.Image:
     # # strip = ndi.gaussian_filter1d(strip, sigma=CANVAS_HEIGHT / 20, axis=0)
     # strip = strip / 255.
 
-    return strip
+    if len(arr) == 0:
+        return None
+    else:
+        return Image.fromarray(np.array([arr], dtype=np.uint8), mode="RGB").filter(ImageFilter.BoxBlur(1))
 
 
 def _saturation_key(rgb):
@@ -132,7 +135,13 @@ def _get_dominant_color(image: Image.Image):
     palette = list(chunked(paletted.getpalette(), 3))
     dominant_color = max(paletted.getcolors(), key=lambda pair: pair[0] * _saturation_key(palette[pair[1]]))
     # print("_get_dominant_color time: --- %s seconds ---" % (time.time() - start_time))
-    return palette[dominant_color[1]]
+    res = palette[dominant_color[1]]
+    is_white = res[0] == 255 and res[1] == 255 and res[2] == 255
+    is_black = res[0] == 0 and res[1] == 0 and res[2] == 0
+    if is_white or is_black:
+        return None
+    else:
+        return res
 
 
 # if __name__ == '__main__':
