@@ -171,10 +171,10 @@ def redirect_to_index():
 @app.route("/is_logged_in/")
 async def is_logged_in():
 
-    return jsonify({
-        "isLoggedIn": True,
-        "userName": "testUsername",
-    })
+    # return jsonify({
+    #     "isLoggedIn": True,
+    #     "userName": "testUsername",
+    # })
 
     credentials_found = 'user_id' in session and 'access_token' in session
     if credentials_found:
