@@ -183,10 +183,11 @@ async def is_logged_in():
             "access_token": session["access_token"]
         }
         test_fetch = (await httpx.AsyncClient().get(f"{FB_GRAPH_URL}/me", params=fields)).json()
+        print(test_fetch)
         if "error" not in test_fetch and "data" in test_fetch:
             username = test_fetch.data.username
             return jsonify({
-                "isLoggedIn": credentials_found,
+                "isLoggedIn": True,
                 "userName": username,
             })
 
