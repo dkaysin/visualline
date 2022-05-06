@@ -13,8 +13,8 @@ import asyncio as aio
 from draw import draw, save_on_disk
 from data import get_media_list
 
-CANVAS_WIDTH = 800
-CANVAS_HEIGHT = 800
+CANVAS_WIDTH = 1080
+CANVAS_HEIGHT = 1080
 DEBUG_MODE = os.environ.get("DEBUG_MODE") == "True"
 
 app = Flask(__name__)
@@ -170,20 +170,29 @@ def redirect_to_index():
 
 @app.route("/is_logged_in/")
 async def is_logged_in():
-    # await aio.sleep(1)
+
+    # return jsonify({
+    #     "isLoggedIn": True,
+    #     "userName": "testUsername",
+    # })
+
     credentials_found = 'user_id' in session and 'access_token' in session
     if credentials_found:
         fields = {
             "fields": "id",
             "access_token": session["access_token"]
         }
-        test_fetch = (await httpx.AsyncClient().get(f"{FB_GRAPH_URL}/me/media", params=fields)).json()
-        if "error" in test_fetch or "data" not in test_fetch:
-            credentials_found = False
+        test_fetch = (await httpx.AsyncClient().get(f"{FB_GRAPH_URL}/me", params=fields)).json()
+        if "error" not in test_fetch and "data" in test_fetch:
+            username = test_fetch.data.username
+            return jsonify({
+                "isLoggedIn": credentials_found,
+                "userName": username,
+            })
 
-    response = jsonify({"isLoggedIn": credentials_found})
-    # response = jsonify({"isLoggedIn": True})
-    return response
+    return jsonify({
+        "isLoggedIn": false,
+    })
 
 
 @app.route("/fetch/")

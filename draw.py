@@ -107,8 +107,9 @@ def _add_watermark(canvas: np.array) -> np.array:
     watermark = np.array(Image.open("watermark.png")) / 255
     wm_h, wm_w, _ = watermark.shape
     alpha = watermark[:, :, 3]
+    OPACITY = 0.8
     for d in range(0, 3):
-        canvas[-wm_h:, -wm_w:, d] = watermark[:, :, d] * alpha + canvas[-wm_h:, -wm_w:, d] * (1-alpha)
+        canvas[-wm_h:, -wm_w:, d] = watermark[:, :, d] * alpha*OPACITY + canvas[-wm_h:, -wm_w:, d] * (1-alpha*OPACITY)
     return canvas
 
 
