@@ -171,10 +171,10 @@ def redirect_to_index():
 @app.route("/is_logged_in/")
 async def is_logged_in():
 
-    # return jsonify({
-    #     "isLoggedIn": True,
-    #     "userName": "testUsername",
-    # })
+    return jsonify({
+        "isLoggedIn": True,
+        "userName": "testUsername",
+    })
 
     credentials_found = 'user_id' in session and 'access_token' in session
     if credentials_found:
@@ -191,7 +191,7 @@ async def is_logged_in():
             })
 
     return jsonify({
-        "isLoggedIn": false,
+        "isLoggedIn": False,
     })
 
 
@@ -240,7 +240,7 @@ async def serve_image():
     db_conn.close()
     gc.collect()
     print("image delivery execution time: --- %s seconds ---" % (time.time() - start_time))
-    response = send_file(output, mimetype='image/jpg')
+    response = send_file(output, mimetype='image/png')
     # except Exception as err:
     #     response = jsonify({
     #         "error": {
