@@ -184,10 +184,10 @@ async def is_logged_in():
         }
         test_fetch = (await httpx.AsyncClient().get(f"{FB_GRAPH_URL}/me", params=fields)).json()
         print(test_fetch)
-        if "error" not in test_fetch and "data" in test_fetch:
+        if "error" not in test_fetch:
             return jsonify({
                 "isLoggedIn": True,
-                "userName": test_fetch["data"]["username"],
+                "userName": test_fetch["username"],
             })
 
     return jsonify({
